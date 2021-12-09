@@ -159,6 +159,8 @@ module.exports = {
                 { from: `${HTML_SRC}index.html`, to: `${DIST}index.html` },
                 { from: DATA_SRC, to: `${DIST}data` },
                 { from: CONNECT_COMMON_DATA_SRC, to: `${DIST}data` },
+                { from: `${JS_SRC}iframe/iframe-inline.js`, to: `${DIST}js/iframe-inline.js` },
+                { from: `${JS_SRC}popup/popup-inline.js`, to: `${DIST}js/popup-inline.js` },
             ],
         }),
     ],

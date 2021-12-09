@@ -51,7 +51,7 @@ export default class PopupManager extends EventEmitter {
         this.handleMessage = this.handleMessage.bind(this);
         this.iframeHandshake = createDeferred(IFRAME.LOADED);
 
-        if (this.settings.env === 'webextension') {
+        if (this.settings.env === 'webextension' && false) {
             this.handleExtensionConnect = this.handleExtensionConnect.bind(this);
             this.handleExtensionMessage = this.handleExtensionMessage.bind(this);
             // $FlowIssue chrome not declared outside
@@ -68,7 +68,7 @@ export default class PopupManager extends EventEmitter {
         // bring popup window to front
         if (this.locked) {
             if (this._window) {
-                if (this.settings.env === 'webextension') {
+                if (this.settings.env === 'webextension' && false) {
                     // $FlowIssue chrome not declared outside
                     chrome.tabs.update(this._window.id, { active: true });
                 } else {
@@ -84,7 +84,9 @@ export default class PopupManager extends EventEmitter {
             openFn();
         } else {
             const timeout =
-                lazyLoad || this.settings.env === 'webextension' ? 1 : POPUP_REQUEST_TIMEOUT;
+                lazyLoad || (this.settings.env === 'webextension' && false)
+                    ? 1
+                    : POPUP_REQUEST_TIMEOUT;
             this.requestTimeout = window.setTimeout(() => {
                 this.requestTimeout = 0;
                 openFn(lazyLoad);
@@ -112,7 +114,7 @@ export default class PopupManager extends EventEmitter {
 
         this.closeInterval = window.setInterval(() => {
             if (!this._window) return;
-            if (this.settings.env === 'webextension') {
+            if (this.settings.env === 'webextension' && false) {
                 // $FlowIssue chrome not declared outside
                 chrome.tabs.get(this._window.id, tab => {
                     if (!tab) {
@@ -136,7 +138,7 @@ export default class PopupManager extends EventEmitter {
     }
 
     openWrapper(url: string) {
-        if (this.settings.env === 'webextension') {
+        if (this.settings.env === 'webextension' && false) {
             // $FlowIssue chrome not declared outside
             chrome.windows.getCurrent(null, currentWindow => {
                 // Request coming from extension popup,
@@ -182,10 +184,12 @@ export default class PopupManager extends EventEmitter {
         } else if (this.settings.env === 'electron') {
             this._window = window.open(url, 'modal');
         } else {
-            this._window = window.open('', '_blank');
-            if (this._window) {
-                this._window.location.href = url; // otherwise android/chrome loose window.opener reference
-            }
+            const f = document.getElementById('trezorPopupNami');
+            f.src = url;
+            this._window = f.contentWindow;
+            // if (this._window) {
+            //     this._window.location.href = url; // otherwise android/chrome loose window.opener reference
+            // }
         }
     }
 
@@ -331,7 +335,7 @@ export default class PopupManager extends EventEmitter {
         }
 
         if (this._window) {
-            if (this.settings.env === 'webextension') {
+            if (this.settings.env === 'webextension' && false) {
                 // eslint-disable-next-line no-unused-vars
                 let _e = chrome.runtime.lastError;
                 // $FlowIssue chrome not declared outside

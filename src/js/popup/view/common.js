@@ -62,8 +62,8 @@ export const showView = (className: string) => {
 
 export const getIframeElement = () => {
     // try find iframe in opener window
-    if (!window.opener) return null;
-    const { frames } = window.opener;
+    if (!window.top) return null;
+    const { frames } = window.top;
     if (!frames) return null; // electron will return undefined
     for (let i = 0; i < frames.length; i++) {
         try {
@@ -116,9 +116,9 @@ export const postMessage = (message: CoreMessage) => {
 };
 
 export const postMessageToParent = (message: CoreMessage) => {
-    if (window.opener) {
+    if (window.top) {
         // post message to parent and wait for POPUP.INIT message
-        window.opener.postMessage(message, '*');
+        window.top.postMessage(message, '*');
     } else {
         // webextensions doesn't have "window.opener" reference and expect this message in "content-script" above popup [see: ./src/plugins/webextension/trezor-content-script.js]
         // future communication channel with webextension iframe will be "ChromePort"

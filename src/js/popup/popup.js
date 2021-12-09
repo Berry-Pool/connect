@@ -183,10 +183,10 @@ const handshake = (payload: $PropertyType<PopupHandshake, 'payload'>) => {
 const onLoad = () => {
     // unsupported browser, this hash was set in parent app (PopupManager)
     // display message and do not continue
-    if (window.location.hash === '#unsupported') {
-        view.initBrowserView(false);
-        return;
-    }
+    // if (window.location.hash === '#unsupported') {
+    //     view.initBrowserView(false);
+    //     return;
+    // }
 
     postMessageToParent(UiMessage(POPUP.LOADED));
 };

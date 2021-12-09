@@ -6,8 +6,8 @@ export const sendMessage = (message: any, origin: string) =>
 
 // send message from popup to parent
 export const sendMessageToOpener = (message: any, origin: string) => {
-    if (window.opener) {
-        return window.opener.postMessage(message, origin);
+    if (window.top) {
+        return window.top.postMessage(message, origin);
     }
     // webextensions are expecting this message in "content-script" which is running in "this.window", above this script
     window.postMessage(message, window.location.origin);
