@@ -14,7 +14,9 @@ export const cipherKeyValue = async () => {
     }
 
     // bundle
-    const bundleKV = await TrezorConnect.cipherKeyValue({ bundle: [{ path: 'm/44', key: 'key' }] });
+    const bundleKV = await TrezorConnect.cipherKeyValue({
+        bundle: [{ path: 'm/44', key: 'key', value: 'hash' }],
+    });
 
     if (bundleKV.success) {
         bundleKV.payload.forEach(item => {
@@ -27,23 +29,23 @@ export const cipherKeyValue = async () => {
     }
 };
 
-export const customMessage = async () => {
+export const customMessage = () => {
     TrezorConnect.customMessage({
         messages: {},
         message: 'MyCustomSignTx',
         params: {
             inputs: { index: 1, hash: '0' },
         },
-        callback: async (request: any) => {
+        callback: (request: any) => {
             if (request.type === 'MyCustomTxReq') {
-                return {
+                return Promise.resolve({
                     message: 'MyCustomTxAck',
                     params: {
                         index: 1,
                     },
-                };
+                });
             }
-            return { message: 'MyCustomSigned' };
+            return Promise.resolve({ message: 'MyCustomSigned' });
         },
     });
 };
@@ -88,9 +90,4 @@ export const requestLogin = async () => {
     TrezorConnect.requestLogin({ challengeHidden: 'a' });
     // @ts-ignore
     TrezorConnect.requestLogin({ challengeVisual: 1 });
-};
-
-export const debugLink = async () => {
-    TrezorConnect.debugLinkDecision({ device: { path: '1' } });
-    TrezorConnect.debugLinkGetState({ device: { path: '1' } });
 };

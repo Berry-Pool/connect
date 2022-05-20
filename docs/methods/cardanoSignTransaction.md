@@ -17,34 +17,40 @@ TrezorConnect.cardanoSignTransaction(params).then(function(result) {
 
 ### Params
 [****Optional common params****](commonParams.md)
-###### [flowtype](../../src/js/types/networks/cardano.js#L87-L211)
-* `signingMode` - *obligatory* [CardanoTxSigningMode](#CardanoTxSigningMode)
-* `inputs` - *obligatory* `Array` of [CardanoInput](../../src/js/types/networks/cardano.js#L87)
-* `outputs` - *obligatory* `Array` of [CardanoOutput](../../src/js/types/networks/cardano.js#L103)
-* `fee` - *obligatory* `String`
-* `protocolMagic` - *obligatory* `Integer` 764824073 for Mainnet, 42 for Testnet
-* `networkId` - *obligatory* `Integer` 1 for Mainnet, 0 for Testnet
+###### [flowtype](../../src/js/types/networks/cardano.js#L89-L216)
+* `signingMode` - *required* [CardanoTxSigningMode](#CardanoTxSigningMode)
+* `inputs` - *required* `Array` of [CardanoInput](../../src/js/types/networks/cardano.js#L92)
+* `outputs` - *required* `Array` of [CardanoOutput](../../src/js/types/networks/cardano.js#L109)
+* `fee` - *required* `String`
+* `protocolMagic` - *required* `Integer` 764824073 for Mainnet, 1097911063 for Testnet
+* `networkId` - *required* `Integer` 1 for Mainnet, 0 for Testnet
 * `ttl` - *optional* `String`
 * `validityIntervalStart` - *optional* `String`
-* `certificates` - *optional* `Array` of [CardanoCertificate](../../src/js/types/networks/cardano.js#L150)
-* `withdrawals` - *optional* `Array` of [CardanoWithdrawal](../../src/js/types/networks/cardano.js#L158)
-* `auxiliaryData` - *optional* [CardanoAuxiliaryData](../../src/js/types/networks/cardano.js#L173)
-* `mint` - *optional* [CardanoMint](../../src/js/types/networks/cardano.js#L164)
+* `certificates` - *optional* `Array` of [CardanoCertificate](../../src/js/types/networks/cardano.js#L158)
+* `withdrawals` - *optional* `Array` of [CardanoWithdrawal](../../src/js/types/networks/cardano.js#L166)
+* `auxiliaryData` - *optional* [CardanoAuxiliaryData](../../src/js/types/networks/cardano.js#L194)
+* `mint` - *optional* [CardanoMint](../../src/js/types/networks/cardano.js#L174)
+* `scriptDataHash` - *optional* `String`
+* `collateralInputs` - *optional* `Array` of [CardanoCollateralInput](../../src/js/types/networks/cardano.js#L176)
+* `requiredSigners` - *optional* `Array` of [CardanoRequiredSigner](../../src/js/types/networks/cardano.js#L182)
 * `additionalWitnessRequests` - *optional* `Array` of `string | Array<number>` (paths). Used for multi-sig and token minting witness requests as those can not be determined from the transaction parameters.
 * `metadata` - *removed* - use `auxiliaryData` instead
-* `derivationType` — *optional* `CardanoDerivationType` enum. determines used derivation type. Default is set to ICARUS_TREZOR=2
+* `derivationType` — *optional* `CardanoDerivationType` enum. Determines used derivation type. Default is set to ICARUS_TREZOR=2.
+* `includeNetworkId` — *optional* `Boolean`. Determines whether `networkId` should be explicitly serialized into the transaction body. Default is `false`.
 
 ### CardanoTxSigningMode
 
-[Type definition](../../src/js/types/trezor/protobuf.js#L98)
+[Type definition](../../src/js/types/trezor/protobuf.js#L604)
 
 #### `ORDINARY_TRANSACTION`
 
-Represents an ordinary user transaction transferring funds, delegating stake or withdrawing rewards. The transaction will be witnessed by keys derived from paths included in the inputs, certificates and withdrawals. Additionaly, if token minting is present, transaction will also be witnessed by keys derived from paths included in `additionalWitnessRequests`.
+Represents an ordinary user transaction transferring funds, delegating stake or withdrawing rewards. The transaction will be witnessed by keys derived from paths included in the `inputs`, `certificates` and `withdrawals`. Additionaly, if token minting is present, transaction will also be witnessed by keys derived from paths included in `additionalWitnessRequests`.
 
 The transaction
 - *should* have valid `path` property on all `inputs`
 - *must not* contain a pool registration certificate
+- *must not* contain `collateralInputs` and `requiredSigners`
+- *must* contain paths as stake credentials in certificates and withdrawals (no key hashes or script hashes)
 - *may* contain only 1852 and 1855 paths
 - *must not* contain 1855 witness requests when transaction is not minting/burning tokens
 
@@ -57,6 +63,7 @@ The transaction
 - *must* have single owner given by path on that certificate
 - *must not* contain withdrawals
 - *must not* contain token minting
+- *must not* contain `collateralInputs` and `requiredSigners`
 - *must* contain only staking witness requests
 
 These restrictions are in place due to a possibility of maliciously signing *another* part of the transaction with the pool owner path as we are not displaying device-owned paths on the device screen.
@@ -68,13 +75,23 @@ The transaction
 - *must* have `path` undefined on all `inputs`
 - *must not* contain output addresses given by parameters
 - *must not* contain a pool registration certificate
-- *must* contain script hash stake credentials in certificates and withdrawals (no paths)
+- *must not* contain `collateralInputs` and `requiredSigners`
+- *must* contain script hash stake credentials in certificates and withdrawals (no paths or key hashes)
 - *may* contain only 1854 and 1855 witness requests
 - *must not* contain 1855 witness requests when transaction is not minting/burning tokens
 
+#### `PLUTUS_TRANSACTION`
+Represents a transactions containing Plutus script evaluation. The transaction will be witnessed by keys derived from paths included in the `inputs`, `certificates`, `withdrawals`, `collateralInputs`, `requiredSigners` and `additionalWitnessRequests`.
+
+The transaction
+- *should* contain `scriptDataHash` and `collateralInputs`
+- *must not* contain a pool registration certificate
+- *may* contain only 1852, 1854 and 1855 required signers
+- *may* contain only 1852, 1854 and 1855 witness requests
+
 ### Stake pool registration certificate specifics
 
-Trezor supports signing of stake pool registration certificates as a pool owner. The transaction may contain external inputs (e.g. belonging to the pool operator) and Trezor is not able verify whether they are actually external or not, so if we allowed signing the transaction with a spending key, there is the risk of losing funds from an input that the user did not intend to spend from. Moreover there is the risk of inadvertedly signing a withdrawal in the transaction if there's any. To mitigate those risks, we introduced special validation rules for stake pool registration transactions which are validated on Trezor as well. The validation rules are the following:
+Trezor supports signing of stake pool registration certificates as a pool owner. The transaction may contain external inputs (e.g. belonging to the pool operator) and Trezor is not able to verify whether they are actually external or not, so if we allowed signing the transaction with a spending key, there is the risk of losing funds from an input that the user did not intend to spend from. Moreover there is the risk of inadvertedly signing a withdrawal in the transaction if there's any. To mitigate those risks, we introduced special validation rules for stake pool registration transactions which are validated on Trezor as well. The validation rules are the following:
 
 1. The transaction must not contain any other certificates, not even another stake pool registration
 2. The transaction must not contain any withdrawals
@@ -122,6 +139,11 @@ TrezorConnect.cardanoSignTransaction({
                     ]
                 }
             ]
+        },
+        {
+            address: 'addr1w9rhu54nz94k9l5v6d9rzfs47h7dv7xffcwkekuxcx3evnqpvuxu0',
+            amount: '1',
+            datumHash: '3b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7',
         }
     ],
     fee: "42",
@@ -151,8 +173,10 @@ TrezorConnect.cardanoSignTransaction({
     auxiliaryData: {
         hash: "ea4c91860dd5ec5449f8f985d227946ff39086b17f10b5afb93d12ee87050b6a"
     },
+    scriptDataHash: "d593fd793c377ac50a3169bb8378ffc257c944da31aa8f355dfa5a4f6ff89e02",
     protocolMagic: 764824073,
     networkId: 1,
+    includeNetworkId: false,
 });
 ```
 
@@ -175,6 +199,7 @@ TrezorConnect.cardanoSignTransaction({
     ttl: "500000000",
     protocolMagic: 764824073,
     networkId: 1,
+    includeNetworkId: false,
     certificates: [
         {
             type: CardanoCertificateType.STAKE_POOL_REGISTRATION,
@@ -259,13 +284,14 @@ TrezorConnect.cardanoSignTransaction({
             stakingPath: "m/1852'/1815'/0'/2/0",
             rewardAddressParameters: {
                 addressType: CardanoAddressType.REWARD,
-                path: "m/1852'/1815'/0'/2/0",
+                stakingPath: "m/1852'/1815'/0'/2/0",
             },
             nonce: "22634813",
         },
     },
     protocolMagic: 764824073,
     networkId: 1,
+    includeNetworkId: false,
 });
 ```
 
@@ -290,7 +316,7 @@ TrezorConnect.cardanoSignTransaction({
             tokenBundle: [
                 {
                     policyId: "95a292ffee938be03e9bae5657982a74e9014eb4960108c9e23a5b39",
-                    tokens: [
+                    tokenAmounts: [
                         {
                             assetNameBytes: "74652474436f696e",
                             amount: "7878754"
@@ -338,8 +364,122 @@ TrezorConnect.cardanoSignTransaction({
             ]
         }
     ],
+    additionalWitnessRequests: [
+        "m/1854'/1815'/0'/0/0",
+        "m/1855'/1815'/0'",
+    ],
     protocolMagic: 764824073,
     networkId: 1,
+    includeNetworkId: false,
+});
+```
+
+#### Plutus transaction
+```javascript
+TrezorConnect.cardanoSignTransaction({
+    signingMode: CardanoTxSigningMode.PLUTUS_TRANSACTION,
+    inputs: [
+        {
+            path: "m/1852'/1815'/0'/0/0",
+            prev_hash: "1af8fa0b754ff99253d983894e63a2b09cbb56c833ba18c3384210163f63dcfc",
+            prev_index: 0,
+        },
+        {
+            prev_hash: "3b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7",
+            prev_index: 0,
+        }
+    ],
+    outputs: [
+        {
+            address: "Ae2tdPwUPEZCanmBz5g2GEwFqKTKpNJcGYPKfDxoNeKZ8bRHr8366kseiK2",
+            amount: "3003112",
+        },
+        {
+            address: 'addr1q84sh2j72ux0l03fxndjnhctdg7hcppsaejafsa84vh7lwgmcs5wgus8qt4atk45lvt4xfxpjtwfhdmvchdf2m3u3hlsd5tq5r',
+            amount: '2000000',
+            tokenBundle: [
+                {
+                    policyId: "95a292ffee938be03e9bae5657982a74e9014eb4960108c9e23a5b39",
+                    tokenAmounts: [
+                        {
+                            assetNameBytes: "74652474436f696e",
+                            amount: "7878754"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    fee: "42",
+    ttl: "10",
+    validityIntervalStart: "20",
+    certificates: [
+        {
+            type: CardanoCertificateType.STAKE_REGISTRATION,
+            path: "m/1852'/1815'/0'/2/0",
+        },
+        {
+            type: CardanoCertificateType.STAKE_DEREGISTRATION,
+            keyHash: '3a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c490711',
+        },
+        {
+            type: CardanoCertificateType.STAKE_DELEGATION,
+            scriptHash: '29fb5fd4aa8cadd6705acc8263cee0fc62edca5ac38db593fec2f9fd',
+            pool: 'f61c42cbf7c8c53af3f520508212ad3e72f674f957fe23ff0acb4973',
+        },
+    ],
+    withdrawals: [
+        {
+            path: "m/1852'/1815'/0'/2/0",
+            amount: "1000",
+        },
+        {
+            keyHash: "3a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c490711",
+            amount: "1000",
+        },
+        {
+            scriptHash: "29fb5fd4aa8cadd6705acc8263cee0fc62edca5ac38db593fec2f9fd",
+            amount: "1000",
+        }
+    ],
+    auxiliaryData: {
+        hash: "ea4c91860dd5ec5449f8f985d227946ff39086b17f10b5afb93d12ee87050b6a"
+    },
+    mint: [
+        {
+            policyId: "95a292ffee938be03e9bae5657982a74e9014eb4960108c9e23a5b39",
+            tokenAmounts: [
+                {
+                    assetNameBytes: "74652474436f696e",
+                    mintAmount: "7878754"
+                }
+            ]
+        }
+    ],
+    scriptDataHash: "d593fd793c377ac50a3169bb8378ffc257c944da31aa8f355dfa5a4f6ff89e02",
+    collateralInputs: [
+        {
+            path: "m/1852'/1815'/0'/0/0",
+            prev_hash: "1af8fa0b754ff99253d983894e63a2b09cbb56c833ba18c3384210163f63dcfc",
+            prev_index: 0,
+        }
+    ],
+    requiredSigners: [
+        {
+            keyPath: "m/1852'/1815'/0'/0/1",
+        },
+        {
+            keyHash: "3a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c490711",
+        },
+    ],
+    additionalWitnessRequests: [
+        "m/1852'/1815'/0'/0/2",
+        "m/1854'/1815'/0'/0/0",
+        "m/1855'/1815'/0'",
+    ],
+    protocolMagic: 764824073,
+    networkId: 1,
+    includeNetworkId: false,
 });
 ```
 
@@ -347,7 +487,7 @@ TrezorConnect.cardanoSignTransaction({
 
 Since transaction streaming has been introduced to the Cardano implementation on Trezor because of memory constraints, Trezor no longer returns the whole serialized transaction as a result of the `CardanoSignTransaction` call. Instead the transaction hash, transaction witnesses and auxiliary data supplement are returned and the serialized transaction needs to be assembled by the client.
 
-###### [flowtype](../../src/js/types/networks/cardano.js#L175-L179)
+###### [flowtype](../../src/js/types/networks/cardano.js#L231-L235)
 ```javascript
 {
     success: true,

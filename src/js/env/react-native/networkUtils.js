@@ -15,16 +15,8 @@ exports.httpRequest = function httpRequest(url, _type) {
         case './data/firmware/2/releases.json':
             return require('@trezor/connect-common/files/firmware/2/releases.json');
         case './data/messages/messages.json':
-            return require('../../../data/messages/messages.json');
+            return require('@trezor/transport/messages.json');
         default:
             return null;
     }
-};
-
-exports.getOrigin = function getOrigin(url) {
-    if (url.indexOf('file://') === 0) return 'file://';
-
-    // eslint-disable-next-line no-useless-escape
-    const parts = url.match(/^.+\:\/\/[^\/]+/);
-    return Array.isArray(parts) && parts.length > 0 ? parts[0] : 'unknown';
 };

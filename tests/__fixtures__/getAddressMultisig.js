@@ -21,6 +21,9 @@ export default {
     method: 'getAddress',
     setup: {
         mnemonic: 'mnemonic_12',
+        settings: {
+            safety_checks: 2,
+        },
     },
     tests: [
         {

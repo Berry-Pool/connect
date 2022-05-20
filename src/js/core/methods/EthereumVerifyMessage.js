@@ -3,26 +3,23 @@
 import AbstractMethod from './AbstractMethod';
 import { validateParams, getFirmwareRange } from './helpers/paramsValidator';
 import { stripHexPrefix, messageToHex } from '../../utils/formatUtils';
-import type { CoreMessage } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
-export default class EthereumVerifyMessage extends AbstractMethod {
+export default class EthereumVerifyMessage extends AbstractMethod<'ethereumVerifyMessage'> {
     params: $ElementType<MessageType, 'EthereumVerifyMessage'>;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read', 'write'];
         this.firmwareRange = getFirmwareRange(this.name, null, this.firmwareRange);
         this.info = 'Verify message';
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'address', type: 'string', obligatory: true },
-            { name: 'signature', type: 'string', obligatory: true },
-            { name: 'message', type: 'string', obligatory: true },
+            { name: 'address', type: 'string', required: true },
+            { name: 'signature', type: 'string', required: true },
+            { name: 'message', type: 'string', required: true },
             { name: 'hex', type: 'boolean' },
         ]);
 

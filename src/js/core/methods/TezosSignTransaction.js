@@ -5,15 +5,12 @@ import { validateParams, getFirmwareRange } from './helpers/paramsValidator';
 import { getMiscNetwork } from '../../data/CoinInfo';
 import { validatePath } from '../../utils/pathUtils';
 import * as helper from './helpers/tezosSignTx';
-
-import type { CoreMessage } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
-export default class TezosSignTransaction extends AbstractMethod {
+export default class TezosSignTransaction extends AbstractMethod<'tezosSignTransaction'> {
     params: $ElementType<MessageType, 'TezosSignTx'>;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.requiredPermissions = ['read', 'write'];
         this.firmwareRange = getFirmwareRange(
             this.name,
@@ -22,13 +19,13 @@ export default class TezosSignTransaction extends AbstractMethod {
         );
         this.info = 'Sign Tezos transaction';
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'path', obligatory: true },
-            { name: 'branch', type: 'string', obligatory: true },
-            { name: 'operation', obligatory: true },
+            { name: 'path', required: true },
+            { name: 'branch', type: 'string', required: true },
+            { name: 'operation', required: true },
         ]);
 
         const path = validatePath(payload.path, 3);

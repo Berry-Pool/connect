@@ -6,26 +6,25 @@ import { ERRORS } from '../../../constants';
 
 import { isBackendSupported, findBackend } from '../../../backend/BlockchainLink';
 import { getCoinInfo } from '../../../data/CoinInfo';
-import type { CoreMessage, CoinInfo } from '../../../types';
+import type { CoinInfo } from '../../../types';
 
 type Params = {
     coinInfo: CoinInfo,
 };
 
-export default class BlockchainDisconnect extends AbstractMethod {
+export default class BlockchainDisconnect extends AbstractMethod<'blockchainDisconnect'> {
     params: Params;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.requiredPermissions = [];
         this.info = '';
         this.useDevice = false;
         this.useUi = false;
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
-        validateParams(payload, [{ name: 'coin', type: 'string', obligatory: true }]);
+        validateParams(payload, [{ name: 'coin', type: 'string', required: true }]);
 
         const coinInfo = getCoinInfo(payload.coin);
         if (!coinInfo) {

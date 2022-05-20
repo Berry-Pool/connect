@@ -8,7 +8,6 @@ export default {
             description: 'Change label, rotation and passphrase',
             params: {
                 label: 'cool label',
-                auto_lock_delay: 300,
                 display_rotation: 90,
                 use_passphrase: false,
             },
@@ -17,9 +16,9 @@ export default {
             },
         },
         {
-            description: 'Change auto_lock_delay back',
+            description: 'Change auto_lock_delay',
             params: {
-                auto_lock_delay: 1000,
+                auto_lock_delay_ms: 60 * 1000,
                 display_rotation: 0,
             },
             result: {

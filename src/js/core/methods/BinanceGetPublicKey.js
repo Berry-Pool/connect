@@ -9,28 +9,25 @@ import * as UI from '../../constants/ui';
 import { UiMessage } from '../../message/builder';
 
 import type { BinancePublicKey } from '../../types/networks/binance';
-import type { CoreMessage } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
-export default class BinanceGetPublicKey extends AbstractMethod {
+export default class BinanceGetPublicKey extends AbstractMethod<'binanceGetPublicKey'> {
     params: $ElementType<MessageType, 'BinanceGetPublicKey'>[] = [];
 
     hasBundle: boolean;
 
     confirmed: ?boolean;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read'];
         this.firmwareRange = getFirmwareRange(this.name, getMiscNetwork('BNB'), this.firmwareRange);
         this.info = 'Export Binance public key';
 
         // create a bundle with only one batch if bundle doesn't exists
-        this.hasBundle = Object.prototype.hasOwnProperty.call(message.payload, 'bundle');
-        const payload = !this.hasBundle
-            ? { ...message.payload, bundle: [message.payload] }
-            : message.payload;
+        this.hasBundle = !!this.payload.bundle;
+        const payload = !this.payload.bundle
+            ? { ...this.payload, bundle: [this.payload] }
+            : this.payload;
 
         // validate bundle type
         validateParams(payload, [{ name: 'bundle', type: 'array' }]);
@@ -38,7 +35,7 @@ export default class BinanceGetPublicKey extends AbstractMethod {
         payload.bundle.forEach(batch => {
             // validate incoming parameters for each batch
             validateParams(batch, [
-                { name: 'path', obligatory: true },
+                { name: 'path', required: true },
                 { name: 'showOnTrezor', type: 'boolean' },
             ]);
 

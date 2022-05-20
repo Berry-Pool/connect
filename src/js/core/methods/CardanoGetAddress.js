@@ -7,16 +7,16 @@ import { fromHardened, getSerializedPath } from '../../utils/pathUtils';
 import {
     addressParametersFromProto,
     addressParametersToProto,
+    modifyAddressParametersForBackwardsCompatibility,
     validateAddressParameters,
 } from './helpers/cardanoAddressParameters';
 
 import { UI, ERRORS } from '../../constants';
 import { UiMessage } from '../../message/builder';
 
-import type { CoreMessage } from '../../types';
 import type { CardanoAddress } from '../../types/networks/cardano';
 import { CardanoAddressType } from '../../types/networks/cardano';
-import type { CardanoAddressParametersType, MessageType } from '../../types/trezor/protobuf';
+import type { MessageType } from '../../types/trezor/protobuf';
 import { Enum_CardanoDerivationType as CardanoDerivationType } from '../../types/trezor/protobuf';
 
 type Params = {
@@ -24,7 +24,7 @@ type Params = {
     address?: string,
 };
 
-export default class CardanoGetAddress extends AbstractMethod {
+export default class CardanoGetAddress extends AbstractMethod<'cardanoGetAddress'> {
     params: Params[] = [];
 
     hasBundle: boolean;
@@ -33,9 +33,7 @@ export default class CardanoGetAddress extends AbstractMethod {
 
     confirmed: ?boolean;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read'];
         this.firmwareRange = getFirmwareRange(
             this.name,
@@ -44,10 +42,10 @@ export default class CardanoGetAddress extends AbstractMethod {
         );
 
         // create a bundle with only one batch if bundle doesn't exists
-        this.hasBundle = Object.prototype.hasOwnProperty.call(message.payload, 'bundle');
-        const payload = !this.hasBundle
-            ? { ...message.payload, bundle: [message.payload] }
-            : message.payload;
+        this.hasBundle = !!this.payload.bundle;
+        const payload = !this.payload.bundle
+            ? { ...this.payload, bundle: [this.payload] }
+            : this.payload;
 
         // validate bundle type
         validateParams(payload, [
@@ -58,9 +56,9 @@ export default class CardanoGetAddress extends AbstractMethod {
         payload.bundle.forEach(batch => {
             // validate incoming parameters for each batch
             validateParams(batch, [
-                { name: 'addressParameters', type: 'object', obligatory: true },
-                { name: 'networkId', type: 'number', obligatory: true },
-                { name: 'protocolMagic', type: 'number', obligatory: true },
+                { name: 'addressParameters', type: 'object', required: true },
+                { name: 'networkId', type: 'number', required: true },
+                { name: 'protocolMagic', type: 'number', required: true },
                 { name: 'derivationType', type: 'number' },
                 { name: 'address', type: 'string' },
                 { name: 'showOnTrezor', type: 'boolean' },
@@ -196,40 +194,6 @@ export default class CardanoGetAddress extends AbstractMethod {
         }
     }
 
-    _modifyForBackwardsCompatibility(
-        address_parameters: CardanoAddressParametersType,
-    ): CardanoAddressParametersType {
-        if (address_parameters.address_type === CardanoAddressType.REWARD) {
-            // older firmware expects reward address path in path parameter
-            let { address_n, address_n_staking } = address_parameters;
-
-            if (address_n.length > 0 && address_n_staking.length > 0) {
-                throw ERRORS.TypedError(
-                    'Method_InvalidParameter',
-                    `Only stakingPath is allowed for CardanoAddressType.REWARD`,
-                );
-            }
-
-            if (this.device.atLeast(['0', '2.4.3'])) {
-                if (address_n.length > 0) {
-                    address_n_staking = address_n;
-                    address_n = [];
-                }
-            } else if (address_n_staking.length > 0) {
-                address_n = address_n_staking;
-                address_n_staking = [];
-            }
-
-            return {
-                ...address_parameters,
-                address_n,
-                address_n_staking,
-            };
-        }
-
-        return address_parameters;
-    }
-
     async run() {
         const responses: CardanoAddress[] = [];
 
@@ -237,7 +201,8 @@ export default class CardanoGetAddress extends AbstractMethod {
             const batch = this.params[i];
 
             this._ensureFirmwareSupportsBatch(batch);
-            batch.address_parameters = this._modifyForBackwardsCompatibility(
+            batch.address_parameters = modifyAddressParametersForBackwardsCompatibility(
+                this.device,
                 batch.address_parameters,
             );
 

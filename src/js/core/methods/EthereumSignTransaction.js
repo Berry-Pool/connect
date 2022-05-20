@@ -7,8 +7,6 @@ import { getEthereumNetwork } from '../../data/CoinInfo';
 import { getNetworkLabel } from '../../utils/ethereumUtils';
 import { stripHexPrefix } from '../../utils/formatUtils';
 import * as helper from './helpers/ethereumSignTx';
-
-import type { CoreMessage } from '../../types';
 import type {
     EthereumTransaction,
     EthereumTransactionEIP1559,
@@ -40,20 +38,18 @@ const strip: (value: any) => any = value => {
     return value;
 };
 
-export default class EthereumSignTx extends AbstractMethod {
+export default class EthereumSignTx extends AbstractMethod<'ethereumSignTransaction'> {
     params: Params;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read', 'write'];
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'path', obligatory: true },
-            { name: 'transaction', obligatory: true },
+            { name: 'path', required: true },
+            { name: 'transaction', required: true },
         ]);
 
         const path = validatePath(payload.path, 3);
@@ -76,21 +72,21 @@ export default class EthereumSignTx extends AbstractMethod {
 
         const schema = isEIP1559
             ? [
-                  { name: 'to', type: 'string', obligatory: true },
-                  { name: 'value', type: 'string', obligatory: true },
-                  { name: 'gasLimit', type: 'string', obligatory: true },
-                  { name: 'maxFeePerGas', type: 'string', obligatory: true },
-                  { name: 'maxPriorityFeePerGas', type: 'string', obligatory: true },
-                  { name: 'nonce', type: 'string', obligatory: true },
+                  { name: 'to', type: 'string', required: true },
+                  { name: 'value', type: 'string', required: true },
+                  { name: 'gasLimit', type: 'string', required: true },
+                  { name: 'maxFeePerGas', type: 'string', required: true },
+                  { name: 'maxPriorityFeePerGas', type: 'string', required: true },
+                  { name: 'nonce', type: 'string', required: true },
                   { name: 'data', type: 'string' },
-                  { name: 'chainId', type: 'number', obligatory: true },
+                  { name: 'chainId', type: 'number', required: true },
               ]
             : [
-                  { name: 'to', type: 'string', obligatory: true },
-                  { name: 'value', type: 'string', obligatory: true },
-                  { name: 'gasLimit', type: 'string', obligatory: true },
-                  { name: 'gasPrice', type: 'string', obligatory: true },
-                  { name: 'nonce', type: 'string', obligatory: true },
+                  { name: 'to', type: 'string', required: true },
+                  { name: 'value', type: 'string', required: true },
+                  { name: 'gasLimit', type: 'string', required: true },
+                  { name: 'gasPrice', type: 'string', required: true },
+                  { name: 'nonce', type: 'string', required: true },
                   { name: 'data', type: 'string' },
                   { name: 'chainId', type: 'number' },
                   { name: 'txType', type: 'number' },
@@ -100,7 +96,7 @@ export default class EthereumSignTx extends AbstractMethod {
 
         // Since FW 2.4.3+ chainId will be required
         // TODO: this should be removed after next major/minor version (or after few months)
-        // TODO: add "obligatory: true" to chainId validation
+        // TODO: add "required: true" to chainId validation
         if (typeof tx.chainId !== 'number') {
             // eslint-disable-next-line no-console
             console.warn('TrezorConnect.ethereumSignTransaction: Missing chainId parameter!');

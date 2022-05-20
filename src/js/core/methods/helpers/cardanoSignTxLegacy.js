@@ -1,7 +1,9 @@
 /* @flow */
 import * as cbor from 'cbor-web';
 import { ERRORS } from '../../../constants';
+import type { IDevice } from '../../../device/Device';
 import type {
+    UintType,
     CardanoCatalystRegistrationParametersType,
     CardanoTxWithdrawalType,
     CardanoTxInputType,
@@ -21,6 +23,7 @@ import type {
     CardanoAuxiliaryDataSupplement,
 } from '../../../types/networks/cardano';
 import type { CardanoSignTransactionParams } from '../CardanoSignTransaction';
+import { modifyAuxiliaryDataForBackwardsCompatibility } from './cardanoAuxiliaryData';
 
 const METADATA_HASH_KEY = 7;
 
@@ -33,10 +36,10 @@ const CATALYST_REGISTRATION_SIGNATURE_KEY = 1;
 type CardanoPoolParametersTypeLegacy = {
     pool_id: string,
     vrf_key_hash: string,
-    pledge: string | number,
-    cost: string | number,
-    margin_numerator: string | number,
-    margin_denominator: string | number,
+    pledge: UintType,
+    cost: UintType,
+    margin_numerator: UintType,
+    margin_denominator: UintType,
     reward_account: string,
     owners: CardanoPoolOwner[],
     relays: CardanoPoolRelayParameters[],
@@ -58,17 +61,18 @@ type CardanoTxAuxiliaryDataTypeLegacy = {
 type CardanoSignTransactionLegacyParams = {
     auxiliary_data: void | CardanoTxAuxiliaryDataTypeLegacy,
     certificates: CardanoTxCertificateTypeLegacy[],
-    fee: number,
+    fee: UintType,
     inputs: CardanoTxInputType[],
     network_id: number,
     outputs: CardanoTxOutputType[],
     protocol_magic: number,
-    ttl: number,
-    validity_interval_start: number,
+    ttl?: UintType,
+    validity_interval_start?: UintType,
     withdrawals: CardanoTxWithdrawalType[],
 };
 
 export const toLegacyParams = (
+    device: IDevice,
     params: CardanoSignTransactionParams,
 ): CardanoSignTransactionLegacyParams => ({
     inputs: params.inputsWithPath.map(({ input, path }) => ({ ...input, address_n: path })),
@@ -116,7 +120,8 @@ export const toLegacyParams = (
         ? {
               catalyst_registration_parameters: params.auxiliaryData
                   .catalyst_registration_parameters
-                  ? params.auxiliaryData.catalyst_registration_parameters
+                  ? modifyAuxiliaryDataForBackwardsCompatibility(device, params.auxiliaryData)
+                        .catalyst_registration_parameters
                   : undefined,
           }
         : undefined,

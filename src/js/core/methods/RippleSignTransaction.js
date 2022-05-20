@@ -4,15 +4,12 @@ import AbstractMethod from './AbstractMethod';
 import { validateParams, getFirmwareRange } from './helpers/paramsValidator';
 import { getMiscNetwork } from '../../data/CoinInfo';
 import { validatePath } from '../../utils/pathUtils';
-
-import type { CoreMessage } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
-export default class RippleSignTransaction extends AbstractMethod {
+export default class RippleSignTransaction extends AbstractMethod<'rippleSignTransaction'> {
     params: $ElementType<MessageType, 'RippleSignTx'>;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.requiredPermissions = ['read', 'write'];
         this.firmwareRange = getFirmwareRange(
             this.name,
@@ -21,11 +18,11 @@ export default class RippleSignTransaction extends AbstractMethod {
         );
         this.info = 'Sign Ripple transaction';
 
-        const { payload } = message;
+        const { payload } = this;
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'path', obligatory: true },
-            { name: 'transaction', obligatory: true },
+            { name: 'path', required: true },
+            { name: 'transaction', required: true },
         ]);
 
         const path = validatePath(payload.path, 5);
@@ -33,7 +30,7 @@ export default class RippleSignTransaction extends AbstractMethod {
         const { transaction } = payload;
 
         validateParams(transaction, [
-            { name: 'fee', type: 'string' },
+            { name: 'fee', type: 'uint' },
             { name: 'flags', type: 'number' },
             { name: 'sequence', type: 'number' },
             { name: 'maxLedgerVersion', type: 'number' },
@@ -41,8 +38,8 @@ export default class RippleSignTransaction extends AbstractMethod {
         ]);
 
         validateParams(transaction.payment, [
-            { name: 'amount', type: 'string', obligatory: true },
-            { name: 'destination', type: 'string', obligatory: true },
+            { name: 'amount', type: 'uint', required: true },
+            { name: 'destination', type: 'string', required: true },
             { name: 'destinationTag', type: 'number' },
         ]);
 

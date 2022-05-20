@@ -1,21 +1,20 @@
 /* @flow */
-/* istanbul ignore next */
-import TinyWorker from 'tiny-worker';
-import type { Transport } from 'trezor-link';
+import BlockbookWorker from '@trezor/blockchain-link/lib/workers/blockbook';
+import RippleWorker from '@trezor/blockchain-link/lib/workers/ripple';
+import BlockfrostWorker from '@trezor/blockchain-link/lib/workers/blockfrost';
+import ElectrumWorker from '@trezor/blockchain-link/lib/workers/electrum';
+import type { Transport } from '@trezor/transport';
 
 type TransportWrapper = () => Transport;
 
-export const WebUsbPlugin: TransportWrapper | typeof undefined = undefined;
-export const ReactNativeUsbPlugin: TransportWrapper | typeof undefined = undefined;
+const WebUsbPlugin: TransportWrapper | typeof undefined = undefined;
+const ReactNativeUsbPlugin: TransportWrapper | typeof undefined = undefined;
 
-export const BlockbookWorker = () =>
-    new TinyWorker(() => {
-        // $FlowIssue
-        require('@trezor/blockchain-link/build/node/blockbook-worker'); // eslint-disable-line global-require
-    });
-
-export const RippleWorker = () =>
-    new TinyWorker(() => {
-        // $FlowIssue
-        require('@trezor/blockchain-link/build/node/ripple-worker'); // eslint-disable-line global-require
-    });
+export {
+    WebUsbPlugin,
+    ReactNativeUsbPlugin,
+    BlockbookWorker,
+    RippleWorker,
+    BlockfrostWorker,
+    ElectrumWorker,
+};

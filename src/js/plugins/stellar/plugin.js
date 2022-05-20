@@ -64,7 +64,7 @@ const transformAmount = amount => new BigNumber(amount).times(10000000).toString
 const transformMemo = memo => {
     switch (memo.type) {
         case StellarSdk.MemoText:
-            return { type: 1, text: memo.value };
+            return { type: 1, text: memo.value.toString('utf-8') };
         case StellarSdk.MemoID:
             return { type: 2, id: memo.value };
         case StellarSdk.MemoHash:
@@ -100,7 +100,7 @@ const transformTimebounds = timebounds => {
  * @returns {TrezorConnect.StellarTransaction}
  */
 const transformTransaction = (path, transaction) => {
-    const amounts = ['amount', 'sendMax', 'destAmount', 'startingBalance', 'limit'];
+    const amounts = ['amount', 'sendMax', 'destAmount', 'startingBalance', 'limit', 'buyAmount'];
     const assets = ['asset', 'sendAsset', 'destAsset', 'selling', 'buying', 'line'];
 
     const operations = transaction.operations.map((o, i) => {
@@ -149,7 +149,10 @@ const transformTransaction = (path, transaction) => {
             // stringify is not necessary, Buffer is also accepted
             operation.value = operation.value.toString('hex');
         }
-
+        if (operation.type === 'manageBuyOffer') {
+            operation.amount = operation.buyAmount;
+            delete operation.buyAmount;
+        }
         operation.type = o.type;
 
         return operation;
@@ -160,7 +163,7 @@ const transformTransaction = (path, transaction) => {
         networkPassphrase: transaction.networkPassphrase,
         transaction: {
             source: transaction.source,
-            fee: transaction.fee,
+            fee: Number.parseInt(transaction.fee, 10),
             sequence: transaction.sequence,
             memo: transformMemo(transaction.memo),
             timebounds: transformTimebounds(transaction.timeBounds),

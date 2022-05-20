@@ -12,18 +12,18 @@ export type AssetGroupWithTokens = {
 const validateTokens = (tokenAmounts: CardanoToken[]) => {
     tokenAmounts.forEach(tokenAmount => {
         validateParams(tokenAmount, [
-            { name: 'assetNameBytes', type: 'string', obligatory: true },
-            { name: 'amount', type: 'amount' },
-            { name: 'mintAmount', type: 'amount' },
+            { name: 'assetNameBytes', type: 'string', required: true },
+            { name: 'amount', type: 'uint' },
+            { name: 'mintAmount', type: 'uint', allowNegative: true },
         ]);
     });
 };
 
-export const validateTokenBundle = (tokenBundle: CardanoAssetGroup[]) => {
+const validateTokenBundle = (tokenBundle: CardanoAssetGroup[]) => {
     tokenBundle.forEach(tokenGroup => {
         validateParams(tokenGroup, [
-            { name: 'policyId', type: 'string', obligatory: true },
-            { name: 'tokenAmounts', type: 'array', obligatory: true },
+            { name: 'policyId', type: 'string', required: true },
+            { name: 'tokenAmounts', type: 'array', required: true },
         ]);
 
         validateTokens(tokenGroup.tokenAmounts);
@@ -37,8 +37,10 @@ const tokenAmountsToProto = (tokenAmounts: CardanoToken[]): CardanoTokenProto[] 
         mint_amount: tokenAmount.mintAmount,
     }));
 
-export const tokenBundleToProto = (tokenBundle: CardanoAssetGroup[]): AssetGroupWithTokens[] =>
-    tokenBundle.map(tokenGroup => ({
+export const tokenBundleToProto = (tokenBundle: CardanoAssetGroup[]): AssetGroupWithTokens[] => {
+    validateTokenBundle(tokenBundle);
+    return tokenBundle.map(tokenGroup => ({
         policyId: tokenGroup.policyId,
         tokens: tokenAmountsToProto(tokenGroup.tokenAmounts),
     }));
+};

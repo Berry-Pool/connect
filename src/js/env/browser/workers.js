@@ -1,8 +1,9 @@
-import SharedConnectionWorker from 'trezor-link/lib/lowlevel/sharedConnectionWorker';
+import SharedConnectionWorker from '@trezor/transport/lib/lowlevel/sharedConnectionWorker';
 import BlockbookWorker from '@trezor/blockchain-link/lib/workers/blockbook';
 import RippleWorker from '@trezor/blockchain-link/lib/workers/ripple';
+import BlockfrostWorker from '@trezor/blockchain-link/lib/workers/blockfrost';
 
-import TrezorLink from 'trezor-link';
+import TrezorLink from '@trezor/transport';
 
 const WebUsbPlugin = () =>
     new TrezorLink.Lowlevel(
@@ -11,5 +12,13 @@ const WebUsbPlugin = () =>
     );
 
 const ReactNativeUsbPlugin = undefined;
+const ElectrumWorker = undefined;
 
-export { WebUsbPlugin, ReactNativeUsbPlugin, BlockbookWorker, RippleWorker };
+export {
+    WebUsbPlugin,
+    ReactNativeUsbPlugin,
+    BlockbookWorker,
+    RippleWorker,
+    BlockfrostWorker,
+    ElectrumWorker,
+};

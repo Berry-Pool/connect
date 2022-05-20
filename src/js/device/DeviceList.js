@@ -2,8 +2,9 @@
 /* @flow */
 
 import EventEmitter from 'events';
-import TrezorLink from 'trezor-link';
-import type { Transport, TrezorDeviceInfoWithSession as DeviceDescriptor } from 'trezor-link';
+import TrezorLink from '@trezor/transport';
+import type { Transport, TrezorDeviceInfoWithSession as DeviceDescriptor } from '@trezor/transport';
+import fetch from 'cross-fetch';
 import { TRANSPORT, DEVICE, ERRORS } from '../constants';
 import DescriptorStream from './DescriptorStream';
 import type { DeviceDescriptorDiff } from './DescriptorStream';
@@ -15,6 +16,8 @@ import { initLog } from '../utils/debug';
 import { resolveAfter } from '../utils/promiseUtils';
 
 import { WebUsbPlugin, ReactNativeUsbPlugin } from '../env/node/workers';
+import { getAbortController } from './AbortController';
+import type { Controller } from './AbortController';
 
 const { BridgeV2, Fallback } = TrezorLink;
 
@@ -51,7 +54,7 @@ export default class DeviceList extends EventEmitter {
 
     penalizedDevices: { [deviceID: string]: number } = {};
 
-    fetchController: ?AbortController;
+    fetchController: ?Controller;
 
     constructor() {
         super();
@@ -68,19 +71,10 @@ export default class DeviceList extends EventEmitter {
             const bridge = new BridgeV2(null, null);
             bridge.setBridgeLatestVersion(bridgeLatestVersion);
 
-            if (typeof fetch !== 'undefined' && typeof AbortController !== 'undefined') {
-                try {
-                    this.fetchController = new AbortController();
-                } catch (error) {
-                    // silent error. fetchController is not available.
-                }
-                if (this.fetchController) {
-                    const { signal } = this.fetchController;
-                    const fetchWithSignal = (args, options = {}) =>
-                        fetch(args, { ...options, signal });
-                    BridgeV2.setFetch(fetchWithSignal, true);
-                }
-            }
+            this.fetchController = getAbortController();
+            const { signal } = this.fetchController;
+            const fetchWithSignal = (args, options = {}) => fetch(args, { ...options, signal });
+            BridgeV2.setFetch(fetchWithSignal, typeof window === 'undefined');
 
             transports.push(bridge);
         }

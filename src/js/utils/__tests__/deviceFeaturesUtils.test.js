@@ -104,6 +104,7 @@ describe('utils/deviceFeaturesUtils', () => {
         // default Capabilities T1
         expect(getUnavailableCapabilities(feat1, coins, support)).toEqual({
             ada: 'no-support',
+            tada: 'no-support',
             bnb: 'no-support',
             eos: 'no-support',
             ppc: 'update-required',
@@ -118,8 +119,9 @@ describe('utils/deviceFeaturesUtils', () => {
             replaceTransaction: 'update-required',
             decreaseOutput: 'update-required',
             eip1559: 'update-required',
+            'eip712-domain-only': 'update-required',
             taproot: 'update-required',
-            aopp: 'update-required',
+            signMessageNoScriptType: 'update-required',
         });
 
         const feat2 = {
@@ -135,8 +137,9 @@ describe('utils/deviceFeaturesUtils', () => {
             replaceTransaction: 'update-required',
             decreaseOutput: 'update-required',
             eip1559: 'update-required',
+            'eip712-domain-only': 'update-required',
             taproot: 'update-required',
-            aopp: 'update-required',
+            signMessageNoScriptType: 'update-required',
         });
 
         // added new capability

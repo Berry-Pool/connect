@@ -7,8 +7,6 @@ import { validatePath } from '../../utils/pathUtils';
 import * as helper from './helpers/stellarSignTx';
 import { ERRORS } from '../../constants';
 
-import type { CoreMessage } from '../../types';
-
 type Params = {
     path: number[],
     networkPassphrase: string,
@@ -20,11 +18,10 @@ const StellarSignTransactionFeatures = Object.freeze({
     pathPaymentStrictSend: ['1.10.4', '2.4.3'],
 });
 
-export default class StellarSignTransaction extends AbstractMethod {
+export default class StellarSignTransaction extends AbstractMethod<'stellarSignTransaction'> {
     params: Params;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.requiredPermissions = ['read', 'write'];
         this.firmwareRange = getFirmwareRange(
             this.name,
@@ -33,12 +30,12 @@ export default class StellarSignTransaction extends AbstractMethod {
         );
         this.info = 'Sign Stellar transaction';
 
-        const { payload } = message;
+        const { payload } = this;
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'path', obligatory: true },
-            { name: 'networkPassphrase', type: 'string', obligatory: true },
-            { name: 'transaction', obligatory: true },
+            { name: 'path', required: true },
+            { name: 'networkPassphrase', type: 'string', required: true },
+            { name: 'transaction', required: true },
         ]);
 
         const path = validatePath(payload.path, 3);

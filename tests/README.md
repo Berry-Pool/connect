@@ -21,7 +21,9 @@ _Note: Running tests with custom firmware [is not currently possible](https://gi
 
 ### On Linux
 #### Prerequisites
+
 - [Docker](https://docs.docker.com/engine/install/)
+- [Podman](https://podman.io/getting-started/installation) using `tests/run.sh -D podman` (not officially supported)
 
 ### On MacOS
 _Note: As of now M1 Macs aren't supported. See [this issue](https://github.com/trezor/trezor-suite/issues/3616) for detailed information._
@@ -71,9 +73,13 @@ Cached transactions are provided to test fixtures via [TX_CACHE](./__txcache__/i
 Missing tx json? use [this tool](./__txcache__/gen-reftx.js) to generate it.
 
 ## Websocket cache
-Similar to transaction cache. `@trezor/blockchain-link` module is conditionally mocked returning cached results from `tests/__wscache__`.
+Similar to transaction cache. If `process.env.TESTS_USE_WS_CACHE` is set to `true` then `@trezor/blockchain-link` is conditionally connected to a local websocket server returning cached results from `tests/__wscache__`.
 
-[See mock](./__wscache__/worker.js)
+[Server](./__wscache__/server.js)
+
+[WebSocketServer in Karma plugin](./karma.plugin.js)
+
+[WsCacheServer in jest.setup](./jest.setup.js)
 
 ## Karma production tests
 Testing `./build` directory in browser environment.

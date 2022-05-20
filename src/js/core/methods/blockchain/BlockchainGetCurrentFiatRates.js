@@ -6,27 +6,26 @@ import { ERRORS } from '../../../constants';
 
 import { isBackendSupported, initBlockchain } from '../../../backend/BlockchainLink';
 import { getCoinInfo } from '../../../data/CoinInfo';
-import type { CoreMessage, CoinInfo } from '../../../types';
+import type { CoinInfo } from '../../../types';
 
 type Params = {
     coinInfo: CoinInfo,
     currencies?: string[],
 };
 
-export default class BlockchainGetCurrentFiatRates extends AbstractMethod {
+export default class BlockchainGetCurrentFiatRates extends AbstractMethod<'blockchainGetCurrentFiatRates'> {
     params: Params;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.useDevice = false;
         this.useUi = false;
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'currencies', type: 'array', obligatory: false },
-            { name: 'coin', type: 'string', obligatory: true },
+            { name: 'currencies', type: 'array', required: false },
+            { name: 'coin', type: 'string', required: true },
         ]);
 
         const coinInfo = getCoinInfo(payload.coin);

@@ -11,7 +11,7 @@ import { UI, ERRORS } from '../../constants';
 import { UiMessage } from '../../message/builder';
 
 import type { EthereumAddress } from '../../types/networks/ethereum';
-import type { CoreMessage, EthereumNetworkInfo } from '../../types';
+import type { EthereumNetworkInfo } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
 type Params = {
@@ -20,7 +20,7 @@ type Params = {
     network?: EthereumNetworkInfo,
 };
 
-export default class EthereumGetAddress extends AbstractMethod {
+export default class EthereumGetAddress extends AbstractMethod<'ethereumGetAddress'> {
     params: Params[] = [];
 
     hasBundle: boolean;
@@ -29,16 +29,14 @@ export default class EthereumGetAddress extends AbstractMethod {
 
     confirmed: ?boolean;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read'];
 
         // create a bundle with only one batch if bundle doesn't exists
-        this.hasBundle = Object.prototype.hasOwnProperty.call(message.payload, 'bundle');
-        const payload = !this.hasBundle
-            ? { ...message.payload, bundle: [message.payload] }
-            : message.payload;
+        this.hasBundle = !!this.payload.bundle;
+        const payload = !this.payload.bundle
+            ? { ...this.payload, bundle: [this.payload] }
+            : this.payload;
 
         // validate bundle type
         validateParams(payload, [
@@ -49,7 +47,7 @@ export default class EthereumGetAddress extends AbstractMethod {
         payload.bundle.forEach(batch => {
             // validate incoming parameters for each batch
             validateParams(batch, [
-                { name: 'path', obligatory: true },
+                { name: 'path', required: true },
                 { name: 'address', type: 'string' },
                 { name: 'showOnTrezor', type: 'boolean' },
             ]);
@@ -145,15 +143,12 @@ export default class EthereumGetAddress extends AbstractMethod {
         return uiResp.payload;
     }
 
-    _call({ address_n, show_display, network }: Params) {
+    _call({ address_n, show_display }: Params) {
         const cmd = this.device.getCommands();
-        return cmd.ethereumGetAddress(
-            {
-                address_n,
-                show_display,
-            },
-            network,
-        );
+        return cmd.ethereumGetAddress({
+            address_n,
+            show_display,
+        });
     }
 
     async run() {

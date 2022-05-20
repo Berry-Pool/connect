@@ -29,7 +29,7 @@ import { verifyTx } from './helpers/signtxVerify';
 
 import { UiMessage } from '../../message/builder';
 
-import type { CoreMessage, BitcoinNetworkInfo } from '../../types';
+import type { BitcoinNetworkInfo } from '../../types';
 import type { SignedTransaction, TransactionOptions } from '../../types/networks/bitcoin';
 import type {
     DiscoveryAccount,
@@ -50,20 +50,19 @@ type Params = {
     skipPermutation?: $ElementType<PrecomposeParams, 'skipPermutation'>,
 };
 
-export default class ComposeTransaction extends AbstractMethod {
+export default class ComposeTransaction extends AbstractMethod<'composeTransaction'> {
     params: Params;
 
     discovery: Discovery | typeof undefined;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.requiredPermissions = ['read', 'write'];
 
-        const { payload } = message;
+        const { payload } = this;
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'outputs', type: 'array', obligatory: true },
-            { name: 'coin', type: 'string', obligatory: true },
+            { name: 'outputs', type: 'array', required: true },
+            { name: 'coin', type: 'string', required: true },
             { name: 'push', type: 'boolean' },
             { name: 'account', type: 'object' },
             { name: 'feeLevels', type: 'array' },

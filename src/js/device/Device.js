@@ -1,7 +1,7 @@
 /* @flow */
 
 import EventEmitter from 'events';
-import type { Transport, TrezorDeviceInfoWithSession as DeviceDescriptor } from 'trezor-link';
+import type { Transport, TrezorDeviceInfoWithSession as DeviceDescriptor } from '@trezor/transport';
 import DeviceCommands from './DeviceCommands';
 
 import type {
@@ -231,10 +231,10 @@ class Device extends EventEmitter {
         }
     }
 
-    interruptionFromUser(error: Error) {
+    async interruptionFromUser(error: Error) {
         _log.debug('+++++interruptionFromUser');
         if (this.commands) {
-            this.commands.cancel();
+            await this.commands.cancel();
             this.commands.dispose();
         }
         if (this.runPromise) {

@@ -5,24 +5,22 @@ import { validateParams, validateCoinPath, getFirmwareRange } from './helpers/pa
 import { validatePath, getLabel, getScriptType } from '../../utils/pathUtils';
 import { getBitcoinNetwork } from '../../data/CoinInfo';
 import { messageToHex } from '../../utils/formatUtils';
-import type { CoreMessage, BitcoinNetworkInfo } from '../../types';
+import type { BitcoinNetworkInfo } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
-export default class SignMessage extends AbstractMethod {
+export default class SignMessage extends AbstractMethod<'signMessage'> {
     params: $ElementType<MessageType, 'SignMessage'>;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read', 'write'];
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'path', obligatory: true },
+            { name: 'path', required: true },
             { name: 'coin', type: 'string' },
-            { name: 'message', type: 'string', obligatory: true },
+            { name: 'message', type: 'string', required: true },
             { name: 'hex', type: 'boolean' },
             { name: 'no_script_type', type: 'boolean' },
         ]);
@@ -39,9 +37,9 @@ export default class SignMessage extends AbstractMethod {
         this.info = getLabel('Sign #NETWORK message', coinInfo);
 
         // firmware range depends on used no_script_type parameter
-        // AOPP is possible since 1.10/42.4.3
+        // no_script_type is possible since 1.10.4 / 2.4.3
         this.firmwareRange = getFirmwareRange(
-            payload.no_script_type ? 'aopp' : this.name,
+            payload.no_script_type ? 'signMessageNoScriptType' : this.name,
             coinInfo,
             this.firmwareRange,
         );

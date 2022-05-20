@@ -1,6 +1,5 @@
 /* @flow */
 
-import BigNumber from 'bignumber.js';
 import { ERRORS } from '../../../constants';
 import { fromHardened } from '../../../utils/pathUtils';
 import { versionCompare } from '../../../utils/versionUtils';
@@ -8,65 +7,94 @@ import { versionCompare } from '../../../utils/versionUtils';
 import DataManager from '../../../data/DataManager';
 import type { CoinInfo, FirmwareRange } from '../../../types';
 
+type ParamType = 'string' | 'number' | 'array' | 'array-buffer' | 'boolean' | 'uint' | 'object';
+
 type Param = {
     name: string,
-    type?: 'string' | 'number' | 'array' | 'array-buffer' | 'boolean' | 'amount' | 'object',
-    obligatory?: boolean,
+    type?: ParamType | ParamType[],
+    required?: boolean,
     allowEmpty?: boolean,
+    allowNegative?: boolean,
 };
 
 const invalidParameter = (message: string) => ERRORS.TypedError('Method_InvalidParameter', message);
 
-export const validateParams = (values: any, fields: Param[]) => {
-    fields.forEach(field => {
-        if (Object.prototype.hasOwnProperty.call(values, field.name)) {
-            const value = values[field.name];
-            if (field.type) {
-                if (field.type === 'array') {
-                    if (!Array.isArray(value)) {
-                        // invalid type
-                        throw invalidParameter(
-                            `Parameter "${field.name}" has invalid type. "${field.type}" expected.`,
-                        );
-                    } else if (!field.allowEmpty && value.length < 1) {
-                        throw invalidParameter(`Parameter "${field.name}" is empty.`);
-                    }
-                } else if (field.type === 'amount') {
-                    if (typeof value !== 'string') {
-                        throw invalidParameter(
-                            `Parameter "${field.name}" has invalid type. "string" expected.`,
-                        );
-                    }
-                    try {
-                        const bn = new BigNumber(value);
-                        if (bn.toFixed(0) !== value) {
-                            throw new Error(''); // catch this in lower block and return proper message
-                        }
-                    } catch (error) {
-                        throw invalidParameter(
-                            `Parameter "${field.name}" has invalid value "${value}". Integer representation expected.`,
-                        );
-                    }
-                } else if (field.type === 'array-buffer') {
-                    if (!(value instanceof ArrayBuffer)) {
-                        throw invalidParameter(
-                            `Parameter "${field.name}" has invalid type. "ArrayBuffer" expected.`,
-                        );
-                    }
-                    // eslint-disable-next-line valid-typeof
-                } else if (typeof value !== field.type) {
-                    // invalid type
-                    throw invalidParameter(
-                        `Parameter "${field.name}" has invalid type. "${field.type}" expected.`,
-                    );
-                }
-            }
-        } else if (field.obligatory) {
-            // not found
+export function validateParams<P: $ReadOnly<{ [name: string]: any }>>(
+    params: P,
+    schema: Param[],
+): P {
+    schema.forEach(field => {
+        const value = params[field.name];
+        if (field.required && value == null) {
+            // required parameter not found
             throw invalidParameter(`Parameter "${field.name}" is missing.`);
         }
+
+        // parameter doesn't have a type or value, validation is pointless
+        if (!field.type || value == null) return;
+
+        const { name, type } = field;
+
+        // schema type is a union
+        if (Array.isArray(type)) {
+            // create single field object
+            const p = {};
+            p[name] = value;
+            // validate case for each type in union
+            const success = type.reduce((count, t) => {
+                try {
+                    validateParams(p, [{ name: field.name, type: t }]);
+                    return count + 1;
+                } catch (e) {
+                    return count;
+                }
+            }, 0);
+            // every case ended with error = no type match
+            if (!success) {
+                throw invalidParameter(
+                    `Parameter "${name}" has invalid type. Union of "${type.join('|')}" expected.`,
+                );
+            }
+            return;
+        }
+
+        if (type === 'array') {
+            if (!Array.isArray(value)) {
+                throw invalidParameter(`Parameter "${name}" has invalid type. "${type}" expected.`);
+            }
+            if (!field.allowEmpty && value.length < 1) {
+                throw invalidParameter(`Parameter "${name}" is empty.`);
+            }
+        } else if (type === 'uint') {
+            if (typeof value !== 'string' && typeof value !== 'number') {
+                throw invalidParameter(
+                    `Parameter "${name}" has invalid type. "string|number" expected.`,
+                );
+            }
+            if (
+                (typeof value === 'number' && !Number.isSafeInteger(value)) ||
+                !/^(?:[1-9]\d*|\d)$/.test(
+                    value.toString().replace(/^-/, field.allowNegative ? '' : '-'),
+                )
+            ) {
+                throw invalidParameter(
+                    `Parameter "${name}" has invalid value "${value}". Integer representation expected.`,
+                );
+            }
+        } else if (type === 'array-buffer') {
+            if (!(value instanceof ArrayBuffer)) {
+                throw invalidParameter(
+                    `Parameter "${name}" has invalid type. "ArrayBuffer" expected.`,
+                );
+            }
+            // eslint-disable-next-line valid-typeof
+        } else if (typeof value !== type) {
+            // invalid type
+            throw invalidParameter(`Parameter "${name}" has invalid type. "${type}" expected.`);
+        }
     });
-};
+    return params;
+}
 
 export const validateCoinPath = (coinInfo: ?CoinInfo, path: number[]) => {
     if (coinInfo && coinInfo.slip44 !== fromHardened(path[1])) {
@@ -99,7 +127,7 @@ export const getFirmwareRange = (
     const shortcut = coinInfo ? coinInfo.shortcut.toLowerCase() : null;
     // find firmware range in config.json
     const { supportedFirmware } = DataManager.getConfig();
-    const range = supportedFirmware
+    const ranges = supportedFirmware
         .filter(rule => {
             // check if rule applies to requested method
             if (rule.methods) {
@@ -113,7 +141,7 @@ export const getFirmwareRange = (
             // it may be a global rule for coin or coinType
             return true;
         })
-        .find(c => {
+        .filter(c => {
             if (c.coinType) {
                 // rule for coin type
                 return c.coinType === coinType;
@@ -126,7 +154,7 @@ export const getFirmwareRange = (
             return c.methods || c.capabilities;
         });
 
-    if (range) {
+    for (const range of ranges) {
         const { min, max } = range;
         // override defaults
         // NOTE:

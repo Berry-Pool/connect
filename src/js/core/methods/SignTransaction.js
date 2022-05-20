@@ -25,7 +25,7 @@ import {
 
 import type { RefTransaction, TransactionOptions } from '../../types/networks/bitcoin';
 import type { TxInputType, TxOutputType } from '../../types/trezor/protobuf';
-import type { CoreMessage, BitcoinNetworkInfo, AccountAddresses } from '../../types';
+import type { BitcoinNetworkInfo, AccountAddresses } from '../../types';
 
 type Params = {
     inputs: TxInputType[],
@@ -37,21 +37,20 @@ type Params = {
     push: boolean,
 };
 
-export default class SignTransaction extends AbstractMethod {
+export default class SignTransaction extends AbstractMethod<'signTransaction'> {
     params: Params;
 
-    constructor(message: CoreMessage) {
-        super(message);
+    init() {
         this.requiredPermissions = ['read', 'write'];
         this.info = 'Sign transaction';
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'coin', type: 'string', obligatory: true },
-            { name: 'inputs', type: 'array', obligatory: true },
-            { name: 'outputs', type: 'array', obligatory: true },
+            { name: 'coin', type: 'string', required: true },
+            { name: 'inputs', type: 'array', required: true },
+            { name: 'outputs', type: 'array', required: true },
             { name: 'refTxs', type: 'array', allowEmpty: true },
             { name: 'account', type: 'object' },
             { name: 'locktime', type: 'number' },
@@ -144,9 +143,13 @@ export default class SignTransaction extends AbstractMethod {
                     // fetch account info from the blockbook
                     if (!addresses) {
                         // TODO: validate inputs address_n's === same account
+                        const accountPath = params.inputs.find(i => i.address_n);
+                        if (!accountPath || !accountPath.address_n) {
+                            throw ERRORS.TypedError('Runtime', 'Account not found');
+                        }
                         const node = await device
                             .getCommands()
-                            .getHDNode(params.inputs[0].address_n.slice(0, 3), params.coinInfo);
+                            .getHDNode(accountPath.address_n.slice(0, 3), params.coinInfo);
                         const account = await blockchain.getAccountInfo({
                             descriptor: node.xpubSegwit || node.xpub,
                             coin: params.coinInfo.name,

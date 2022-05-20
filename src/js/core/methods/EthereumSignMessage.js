@@ -4,30 +4,26 @@ import AbstractMethod from './AbstractMethod';
 import { validateParams, getFirmwareRange } from './helpers/paramsValidator';
 import { validatePath } from '../../utils/pathUtils';
 import { getEthereumNetwork } from '../../data/CoinInfo';
-import { toChecksumAddress, getNetworkLabel } from '../../utils/ethereumUtils';
+import { getNetworkLabel } from '../../utils/ethereumUtils';
 import { messageToHex } from '../../utils/formatUtils';
-import type { CoreMessage, EthereumNetworkInfo } from '../../types';
 import type { MessageType } from '../../types/trezor/protobuf';
 
 type Params = {
     ...$ElementType<MessageType, 'EthereumSignMessage'>,
-    network?: EthereumNetworkInfo,
 };
 
-export default class EthereumSignMessage extends AbstractMethod {
+export default class EthereumSignMessage extends AbstractMethod<'ethereumSignMessage'> {
     params: Params;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
+    init() {
         this.requiredPermissions = ['read', 'write'];
 
-        const { payload } = message;
+        const { payload } = this;
 
         // validate incoming parameters
         validateParams(payload, [
-            { name: 'path', obligatory: true },
-            { name: 'message', type: 'string', obligatory: true },
+            { name: 'path', required: true },
+            { name: 'message', type: 'string', required: true },
             { name: 'hex', type: 'boolean' },
         ]);
 
@@ -43,18 +39,16 @@ export default class EthereumSignMessage extends AbstractMethod {
         this.params = {
             address_n: path,
             message: messageHex,
-            network,
         };
     }
 
     async run() {
         const cmd = this.device.getCommands();
-        const { address_n, message, network } = this.params;
+        const { address_n, message } = this.params;
         const response = await cmd.typedCall('EthereumSignMessage', 'EthereumMessageSignature', {
             address_n,
             message,
         });
-        response.message.address = toChecksumAddress(response.message.address, network);
         return response.message;
     }
 }

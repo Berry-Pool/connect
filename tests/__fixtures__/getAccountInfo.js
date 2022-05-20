@@ -88,6 +88,7 @@ export default {
             },
         },
         {
+            skip: ['1', '<2.1.0'],
             description: 'Ripple: first account',
             params: {
                 coin: 'xrp',
@@ -99,6 +100,7 @@ export default {
             },
         },
         {
+            skip: ['1', '<2.1.0'],
             description: 'Ripple: account from descriptor',
             params: {
                 coin: 'xrp',
@@ -116,6 +118,45 @@ export default {
                 path: "m/49'/0'",
             },
             result: false,
+        },
+        {
+            skip: ['1', '<2.3.2'],
+            setup: {
+                mnemonic: 'mnemonic_all',
+            },
+            description: 'Cardano: empty account using descriptor',
+            params: {
+                coin: 'ada',
+                descriptor:
+                    '5d010cf16fdeff40955633d6c565f3844a288a24967cf6b76acbeb271b4f13c1f123474e140a2c360b01f0fa66f2f22e2e965a5b07a80358cf75f77abbd66088',
+                useCardanoDerivation: true,
+            },
+            result: {
+                availableBalance: '0',
+                balance: '0',
+                descriptor:
+                    '5d010cf16fdeff40955633d6c565f3844a288a24967cf6b76acbeb271b4f13c1f123474e140a2c360b01f0fa66f2f22e2e965a5b07a80358cf75f77abbd66088',
+                empty: true,
+            },
+        },
+        {
+            skip: ['1', '<2.3.2'],
+            setup: {
+                mnemonic: 'mnemonic_all',
+            },
+            description: 'Cardano: empty account using path',
+            params: {
+                coin: 'ada',
+                path: "m/1852'/1815'/0'/0/0",
+                useCardanoDerivation: true,
+            },
+            result: {
+                availableBalance: '0',
+                balance: '0',
+                descriptor:
+                    '5d010cf16fdeff40955633d6c565f3844a288a24967cf6b76acbeb271b4f13c1f123474e140a2c360b01f0fa66f2f22e2e965a5b07a80358cf75f77abbd66088',
+                empty: true,
+            },
         },
     ],
 };

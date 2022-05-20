@@ -1,4 +1,11 @@
-import { CardanoAddressType, CardanoCertificateType, CardanoNativeScriptHashDisplayFormat, CardanoNativeScriptType, CardanoPoolRelayType, CardanoTxSigningMode } from 'types/trezor/protobuf';
+import {
+    CardanoAddressType,
+    CardanoCertificateType,
+    CardanoNativeScriptHashDisplayFormat,
+    CardanoNativeScriptType,
+    CardanoPoolRelayType,
+    CardanoTxSigningMode,
+} from 'types/trezor/protobuf';
 import TrezorConnect from '../index';
 
 export const cardanoGetAddress = async () => {
@@ -217,6 +224,7 @@ export const cardanoSignTransaction = async () => {
                         tokenAmounts: [{ assetNameBytes: 'aaff00..', amount: '3003112' }],
                     },
                 ],
+                datumHash: 'aaff00..',
             },
             {
                 addressParameters: {
@@ -237,6 +245,7 @@ export const cardanoSignTransaction = async () => {
                         tokenAmounts: [{ assetNameBytes: 'aaff00..', amount: '3003112' }],
                     },
                 ],
+                datumHash: 'aaff00..',
             },
         ],
         certificates: [
@@ -278,9 +287,12 @@ export const cardanoSignTransaction = async () => {
                     },
                 },
                 scriptHash: 'aaff00..',
+                keyHash: 'aaff00..',
             },
         ],
-        withdrawals: [{ path: 'm/44', amount: '3003112', scriptHash: 'aaff00..' }],
+        withdrawals: [
+            { path: 'm/44', amount: '3003112', scriptHash: 'aaff00..', keyHash: 'aaff00..' },
+        ],
         mint: [
             {
                 policyId: 'aaff00..',
@@ -310,9 +322,24 @@ export const cardanoSignTransaction = async () => {
         fee: '42',
         ttl: '10',
         validityIntervalStart: '20',
+        scriptDataHash: 'aaff00..',
+        collateralInputs: [
+            {
+                path: 'm/44',
+                prev_hash: '1af..',
+                prev_index: 0,
+            },
+        ],
+        requiredSigners: [
+            {
+                keyPath: 'm/44',
+                keyHash: '1af..',
+            },
+        ],
         protocolMagic: 0,
         networkId: 0,
         signingMode: CardanoTxSigningMode.ORDINARY_TRANSACTION,
+        includeNetworkId: false,
     });
 
     if (sign.success) {

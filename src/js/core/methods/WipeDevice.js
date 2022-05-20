@@ -3,17 +3,15 @@
 import AbstractMethod from './AbstractMethod';
 
 import * as UI from '../../constants/ui';
+import * as DEVICE from '../../constants/device';
 import { UiMessage } from '../../message/builder';
 import { getFirmwareRange } from './helpers/paramsValidator';
-import type { CoreMessage } from '../../types';
 
-export default class WipeDevice extends AbstractMethod {
+export default class WipeDevice extends AbstractMethod<'wipeDevice'> {
     confirmed: ?boolean;
 
-    constructor(message: CoreMessage) {
-        super(message);
-
-        this.allowDeviceMode = [UI.INITIALIZE, UI.SEEDLESS];
+    init() {
+        this.allowDeviceMode = [UI.INITIALIZE, UI.SEEDLESS, UI.BOOTLOADER];
         this.useDeviceState = false;
         this.requiredPermissions = ['management'];
         this.firmwareRange = getFirmwareRange(this.name, null, this.firmwareRange);
@@ -48,7 +46,14 @@ export default class WipeDevice extends AbstractMethod {
 
     async run() {
         const cmd = this.device.getCommands();
+
+        if (this.device.isBootloader()) {
+            // firmware doesn't send this button request in bootloader mode
+            this.device.emit(DEVICE.BUTTON, this.device, { code: 'ButtonRequest_WipeDevice' });
+        }
+
         const response = await cmd.typedCall('WipeDevice', 'Success');
+
         return response.message;
     }
 }

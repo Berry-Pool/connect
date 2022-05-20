@@ -23,12 +23,11 @@ import cardanoSignTransaction from './CardanoSignTransaction';
 import cipherKeyValue from './CipherKeyValue';
 import composeTransaction from './ComposeTransaction';
 import customMessage from './CustomMessage';
-import debugLinkDecision from './debuglink/DebugLinkDecision';
-import debugLinkGetState from './debuglink/DebugLinkGetState';
 import ethereumGetAddress from './EthereumGetAddress';
 import ethereumGetPublicKey from './EthereumGetPublicKey';
 import ethereumSignMessage from './EthereumSignMessage';
 import ethereumSignTransaction from './EthereumSignTransaction';
+import ethereumSignTypedData from './EthereumSignTypedData';
 import ethereumVerifyMessage from './EthereumVerifyMessage';
 import getAccountInfo from './GetAccountInfo';
 import getAddress from './GetAddress';
@@ -37,7 +36,6 @@ import getFeatures from './GetFeatures';
 import getPublicKey from './GetPublicKey';
 import getSettings from './GetSettings';
 import liskDeprecated from './LiskDeprecated';
-import loadDevice from './LoadDevice';
 import pushTransaction from './PushTransaction';
 import requestLogin from './RequestLogin';
 import resetDevice from './ResetDevice';
@@ -45,6 +43,7 @@ import rippleGetAddress from './RippleGetAddress';
 import rippleSignTransaction from './RippleSignTransaction';
 import nemGetAddress from './NEMGetAddress';
 import nemSignTransaction from './NEMSignTransaction';
+import setProxy from './SetProxy';
 import signMessage from './SignMessage';
 import signTransaction from './SignTransaction';
 import stellarGetAddress from './StellarGetAddress';
@@ -87,12 +86,11 @@ const METHODS = {
     cipherKeyValue,
     composeTransaction,
     customMessage,
-    debugLinkDecision,
-    debugLinkGetState,
     ethereumGetAddress,
     ethereumGetPublicKey,
     ethereumSignMessage,
     ethereumSignTransaction,
+    ethereumSignTypedData,
     ethereumVerifyMessage,
     getAccountInfo,
     getAddress,
@@ -101,7 +99,6 @@ const METHODS = {
     getPublicKey,
     getSettings,
     liskDeprecated,
-    loadDevice,
     pushTransaction,
     requestLogin,
     resetDevice,
@@ -109,6 +106,7 @@ const METHODS = {
     rippleSignTransaction,
     nemGetAddress,
     nemSignTransaction,
+    setProxy,
     signMessage,
     signTransaction,
     stellarGetAddress,
@@ -133,7 +131,7 @@ const METHODS = {
     rebootToBootloader,
 };
 
-export const find = (message: CoreMessage): AbstractMethod => {
+export const find = (message: CoreMessage): AbstractMethod<any> => {
     if (!message.payload) {
         throw ERRORS.TypedError('Method_InvalidParameter', 'Message payload not found');
     }

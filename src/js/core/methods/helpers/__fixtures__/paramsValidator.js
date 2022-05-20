@@ -37,6 +37,135 @@ export const validateParams = [
         type: 'array-buffer',
         value: 0,
     },
+    {
+        description: 'uint valid (zero string)',
+        type: 'uint',
+        value: '0',
+        success: true,
+    },
+    {
+        description: 'uint valid (zero number)',
+        type: 'uint',
+        value: 0,
+        success: true,
+    },
+    {
+        description: 'uint valid (positive string)',
+        type: 'uint',
+        value: '10',
+        success: true,
+    },
+    {
+        description: 'uint valid (positive number)',
+        type: 'uint',
+        value: 10,
+        success: true,
+    },
+    {
+        description: 'negative string uint valid (allowNegative)',
+        type: 'uint',
+        allowNegative: true,
+        value: '-1',
+        success: true,
+    },
+    {
+        description: 'negative number uint valid (allowNegative)',
+        type: 'uint',
+        allowNegative: true,
+        value: -1,
+        success: true,
+    },
+    {
+        description: 'uint invalid (decimal number)',
+        type: 'uint',
+        value: 10.1,
+    },
+    {
+        description: 'uint invalid (decimal string)',
+        type: 'uint',
+        value: '10.1',
+    },
+    {
+        description: 'uint invalid (negative number)',
+        type: 'uint',
+        value: -1,
+    },
+    {
+        description: 'uint invalid (negative string)',
+        type: 'uint',
+        value: '-1',
+    },
+    {
+        description: 'uint invalid not safe integer',
+        type: 'uint',
+        value: Number.MAX_SAFE_INTEGER + 2,
+    },
+    {
+        description: 'uint invalid leading zeros',
+        type: 'uint',
+        value: '01',
+    },
+    {
+        description: 'uint invalid digits',
+        type: 'uint',
+        value: '123f',
+    },
+    {
+        description: 'uint invalid type',
+        type: 'uint',
+        value: true,
+    },
+    {
+        description: 'not required param without value (null)',
+        type: 'number',
+        value: null,
+        success: true,
+    },
+    {
+        description: 'not required param without value (undefined)',
+        type: 'string',
+        value: null,
+        success: true,
+    },
+    {
+        description: 'required param without type and false negative value (0)',
+        required: true,
+        value: 0,
+        success: true,
+    },
+    {
+        description: 'required param without type and false negative value (false)',
+        required: true,
+        value: false,
+        success: true,
+    },
+    {
+        description: 'required param without value (null)',
+        required: true,
+        value: null,
+    },
+    {
+        description: 'required param without value (undefined)',
+        required: true,
+        value: undefined,
+    },
+    {
+        description: 'param with union of types (string)',
+        type: ['string', 'boolean', 'number'],
+        value: 'true',
+        success: true,
+    },
+    {
+        description: 'param with union of types (boolean)',
+        type: ['string', 'boolean', 'number'],
+        value: true,
+        success: true,
+    },
+    {
+        description: 'param with union of types (invalid value)',
+        type: ['string', 'boolean', 'number', 'array', 'array-buffer'],
+        value: Buffer.from('00'),
+    },
 ];
 
 const DEFAULT_RANGE = {
@@ -104,17 +233,18 @@ export const getFirmwareRange = [
         result: { '1': { min: '1.10.0', max: '0' }, '2': { min: '2.4.0', max: '0' } },
     },
     {
-        description: 'range from config.json (by coinType)',
+        description: 'range from config.json (by coinType and coin as string)',
         config: {
             supportedFirmware: [
                 // this one is ignored, different excludedMethod
-                { coinType: 'bitcoin', methods: ['showAddress'], min: ['1.11.0', '2.5.0'] },
-                { coinType: 'bitcoin', min: ['1.10.0', '2.4.0'] },
-                { coin: 'btc', min: ['1.11.0', '2.5.0'] },
+                { coinType: 'bitcoin', methods: ['showAddress'], min: ['1.12.0', '2.6.0'] },
+                // should merge both of these ranges together, since they both match
+                { coinType: 'bitcoin', min: ['1.10.0', '2.5.0'] },
+                { coin: 'btc', min: ['1.11.0', '2.4.0'] },
             ],
         },
         params: ['signTransaction', DEFAULT_COIN_INFO, DEFAULT_RANGE],
-        result: { '1': { min: '1.10.0', max: '0' }, '2': { min: '2.4.0', max: '0' } },
+        result: { '1': { min: '1.11.0', max: '0' }, '2': { min: '2.5.0', max: '0' } },
     },
     {
         description: 'range from config.json (by coin as string)',
@@ -233,6 +363,6 @@ export const getFirmwareRange = [
             { support: { trezor1: '1.6.2', trezor2: '2.1.0' }, shortcut: 'eth', type: 'ethereum' },
             DEFAULT_RANGE,
         ],
-        result: { '1': { min: '1.8.0', max: '0' }, '2': { min: '2.1.0', max: '0' } },
+        result: { '1': { min: '1.10.4', max: '0' }, '2': { min: '2.4.2', max: '0' } },
     },
 ];

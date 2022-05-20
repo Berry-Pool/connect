@@ -4,7 +4,7 @@ import { Enum_CardanoAddressType as CardanoAddressType } from '../../src/js/type
 const legacyResults = [
     {
         // cardanoGetAddress not supported below this version
-        rules: ['<2.3.2'],
+        rules: ['<2.3.2', '1'],
         success: false,
     },
 ];
@@ -79,7 +79,7 @@ export default {
                     addressType: CardanoAddressType.BYRON,
                     path: "m/44'/1815'/0'/0/0",
                 },
-                protocolMagic: PROTOCOL_MAGICS.testnet,
+                protocolMagic: 42, // legacy testnet protocol magic
                 networkId: NETWORK_IDS.testnet,
             },
             result: {
@@ -94,7 +94,7 @@ export default {
                     addressType: CardanoAddressType.BYRON,
                     path: "m/44'/1815'/0'/0/1",
                 },
-                protocolMagic: PROTOCOL_MAGICS.testnet,
+                protocolMagic: 42, // legacy testnet protocol magic
                 networkId: NETWORK_IDS.testnet,
             },
             result: {
@@ -109,7 +109,7 @@ export default {
                     addressType: CardanoAddressType.BYRON,
                     path: "m/44'/1815'/0'/0/2",
                 },
-                protocolMagic: PROTOCOL_MAGICS.testnet,
+                protocolMagic: 42, // legacy testnet protocol magic
                 networkId: NETWORK_IDS.testnet,
             },
             result: {
@@ -219,7 +219,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -241,7 +241,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -263,7 +263,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -285,7 +285,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -307,7 +307,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -329,7 +329,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -379,7 +379,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -399,7 +399,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -464,7 +464,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -489,7 +489,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -539,7 +539,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],
@@ -559,7 +559,7 @@ export default {
             },
             legacyResults: [
                 {
-                    rules: ['<2.4.3'],
+                    rules: ['<2.4.3', '1'],
                     payload: false,
                 },
             ],

@@ -1,7 +1,7 @@
 /* @flow */
 
 import randombytes from 'randombytes';
-import type { Transport } from 'trezor-link';
+import type { Transport } from '@trezor/transport';
 import { DEVICE, ERRORS, NETWORK } from '../constants';
 
 import * as hdnodeUtils from '../utils/hdnodeUtils';
@@ -16,20 +16,13 @@ import {
     toHardened,
 } from '../utils/pathUtils';
 import { getAccountAddressN } from '../utils/accountUtils';
-import { toChecksumAddress } from '../utils/ethereumUtils';
-import { resolveAfter } from '../utils/promiseUtils';
 import { versionCompare } from '../utils/versionUtils';
 
 import { getSegwitNetwork, getBech32Network } from '../data/CoinInfo';
 
 import type { IDevice } from './Device';
-import type {
-    CoinInfo,
-    BitcoinNetworkInfo,
-    EthereumNetworkInfo,
-    Network,
-    HDNodeResponse,
-} from '../types';
+import type { CoinInfo, BitcoinNetworkInfo, Network, HDNodeResponse } from '../types';
+import type { CardanoDerivationType } from '../types/trezor/protobuf';
 import * as PROTO from '../types/trezor/protobuf';
 
 export type DefaultMessageResponse = {
@@ -278,10 +271,7 @@ export default class DeviceCommands {
         };
     }
 
-    async ethereumGetAddress(
-        { address_n, show_display }: PROTO.EthereumGetAddress,
-        network?: EthereumNetworkInfo,
-    ) {
+    async ethereumGetAddress({ address_n, show_display }: PROTO.EthereumGetAddress) {
         const response = await this.typedCall('EthereumGetAddress', 'EthereumAddress', {
             address_n,
             show_display,
@@ -289,7 +279,7 @@ export default class DeviceCommands {
         return {
             path: address_n,
             serializedPath: getSerializedPath(address_n),
-            address: toChecksumAddress(response.message.address, network),
+            address: response.message.address,
         };
     }
 
@@ -591,48 +581,16 @@ export default class DeviceCommands {
             });
         });
     }
-    // DebugLink messages
-
-    async debugLinkDecision(msg: PROTO.DebugLinkDecision) {
-        const session = await this.transport.acquire(
-            {
-                path: this.device.originalDescriptor.path,
-                previous: this.device.originalDescriptor.debugSession,
-            },
-            true,
-        );
-        await resolveAfter(501, null); // wait for propagation from bridge
-
-        await this.transport.post(session, 'DebugLinkDecision', msg, true);
-        await this.transport.release(session, true, true);
-        this.device.originalDescriptor.debugSession = null; // make sure there are no leftovers
-        await resolveAfter(501, null); // wait for propagation from bridge
-    }
-
-    async debugLinkGetState() {
-        const session = await this.transport.acquire(
-            {
-                path: this.device.originalDescriptor.path,
-                previous: this.device.originalDescriptor.debugSession,
-            },
-            true,
-        );
-        await resolveAfter(501, null); // wait for propagation from bridge
-
-        const response = await this.transport.call(session, 'DebugLinkGetState', {}, true);
-        assertType(response, 'DebugLinkState');
-        await this.transport.release(session, true, true);
-        await resolveAfter(501, null); // wait for propagation from bridge
-        return response.message;
-    }
 
     async getAccountDescriptor(
         coinInfo: CoinInfo,
         indexOrPath: number | number[],
+        derivationType: ?CardanoDerivationType,
     ): Promise<?{ descriptor: string, legacyXpub?: string, address_n: number[] }> {
         const address_n = Array.isArray(indexOrPath)
             ? indexOrPath
             : getAccountAddressN(coinInfo, indexOrPath);
+
         if (coinInfo.type === 'bitcoin') {
             const resp = await this.getHDNode(address_n, coinInfo, false);
             if (isTaprootPath(address_n)) {
@@ -648,9 +606,23 @@ export default class DeviceCommands {
             };
         }
         if (coinInfo.type === 'ethereum') {
-            const resp = await this.ethereumGetAddress({ address_n }, coinInfo);
+            const resp = await this.ethereumGetAddress({ address_n });
             return {
                 descriptor: resp.address,
+                address_n,
+            };
+        }
+        if (coinInfo.shortcut === 'ADA' || coinInfo.shortcut === 'tADA') {
+            if (typeof derivationType === 'undefined')
+                throw new Error('Derivation type is not specified');
+
+            const { message } = await this.typedCall('CardanoGetPublicKey', 'CardanoPublicKey', {
+                address_n,
+                // $FlowIssue - is specified
+                derivation_type: derivationType,
+            });
+            return {
+                descriptor: message.xpub,
                 address_n,
             };
         }
@@ -681,6 +653,10 @@ export default class DeviceCommands {
             return;
         }
 
+        if (this.disposed) {
+            return;
+        }
+
         /**
          * Bridge version =< 2.0.28 has a bug that doesn't permit it to cancel
          * user interactions in progress, so we have to do it manually.
@@ -692,8 +668,12 @@ export default class DeviceCommands {
             versionCompare(version, '2.0.28') < 1
         ) {
             await this.device.legacyForceRelease();
+        } else {
+            await this.transport.post(this.sessionId, 'Cancel', {}, false);
+            // post does not read back from usb stack. this means that there is a pending message left
+            // and we need to remove it so that it does not interfere with the next transport call.
+            // see DeviceCommands.typedCall
+            await this.transport.read(this.sessionId);
         }
-
-        this.transport.post(this.sessionId, 'Cancel', {}, false);
     }
 }

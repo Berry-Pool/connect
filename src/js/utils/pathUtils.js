@@ -3,7 +3,7 @@
 import { ERRORS } from '../constants';
 import type { CoinInfo } from '../types';
 import type {
-    InputScriptType,
+    InternalInputScriptType,
     ChangeOutputScriptType,
     TxInputType,
     TxOutputType,
@@ -63,7 +63,7 @@ export const getAccountType = (path: ?Array<number>) => {
     return 'p2pkh';
 };
 
-export const getScriptType = (path: ?Array<number>): InputScriptType => {
+export const getScriptType = (path: ?Array<number>): InternalInputScriptType => {
     if (!Array.isArray(path) || path.length < 1) return 'SPENDADDRESS';
 
     const p1 = fromHardened(path[0]);
@@ -159,6 +159,11 @@ export const fixPath = <T: TxInputType | TxOutputType>(utxo: T): T => {
     // make sure bip32 indices are unsigned
     if (utxo.address_n && Array.isArray(utxo.address_n)) {
         utxo.address_n = utxo.address_n.map(i => i >>> 0);
+    }
+    // This is only a part of API wide issue: https://github.com/trezor/trezor-suite/issues/4875
+    // it works only in runtime. type T needs to have address_n as string, but currently we are using Protobuf declaration
+    if (utxo.address_n && typeof utxo.address_n === 'string') {
+        utxo.address_n = getHDPath(utxo.address_n);
     }
     return utxo;
 };

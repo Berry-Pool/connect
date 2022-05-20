@@ -22,6 +22,7 @@ import ethereumSignMessage from './ethereumSignMessage';
 import ethereumSignTransaction from './ethereumSignTransaction';
 import ethereumSignTransactionEip155 from './ethereumSignTransactionEip155';
 import ethereumSignTransactionEip1559 from './ethereumSignTransactionEip1559';
+import ethereumSignTypedData from './ethereumSignTypedData';
 import ethereumVerifyMessage from './ethereumVerifyMessage';
 import getAccountInfo from './getAccountInfo';
 import getFeatures from './getFeatures';
@@ -39,6 +40,7 @@ import signTransactionBgold from './signTransactionBgold';
 import signTransactionDash from './signTransactionDash';
 import signTransactionDecred from './signTransactionDecred';
 import signTransactionDoge from './signTransactionDoge';
+import signTransactionExternal from './signTransactionExternal';
 import signTransactionKomodo from './signTransactionKomodo';
 import signTransactionMultisig from './signTransactionMultisig';
 import signTransactionMultisigChange from './signTransactionMultisigChange';
@@ -77,6 +79,7 @@ let fixtures = [
     ethereumSignTransaction,
     ethereumSignTransactionEip155,
     ethereumSignTransactionEip1559,
+    ethereumSignTypedData,
     ethereumVerifyMessage,
     // todo: probably no way todo: FirmwareUpdate.js
     // todo: ripple worker problem
@@ -88,7 +91,6 @@ let fixtures = [
     getFeatures,
     getPublicKey,
     // todo: missing fixtures: GetSettings.js
-    // todo: missing fixtures: LoadDevice.js
     nemGetAddress,
     nemSignTransactionMosaic,
     nemSignTransactionMultisig,
@@ -108,6 +110,7 @@ let fixtures = [
     signTransactionDash,
     signTransactionDecred,
     signTransactionDoge,
+    signTransactionExternal,
     signTransactionKomodo,
     signTransactionMultisig,
     signTransactionMultisigChange,
@@ -125,34 +128,6 @@ let fixtures = [
     // todo: wipeDevice,
     // todo: resetDevice,
 ];
-
-// if env variable TESTS_FIRMWARE, filter out those tests that do not match it
-const firmware = process.env.TESTS_FIRMWARE || '2-master';
-if (firmware) {
-    const [actualMajor, actualMinor, actualPatch] = firmware.split('.');
-    fixtures = fixtures.map(f => {
-        f.tests = f.tests.filter(t => {
-            if (!t.setup || !t.setup.firmware) {
-                return true;
-            }
-            return t.setup.firmware.some(fw => {
-                if (firmware === '2-master' && fw[1] === '2-master') return true;
-
-                const [fromMajor, fromMinor, fromPatch] = fw[0].split('.');
-                const [toMajor, toMinor, toPatch] = fw[1].split('.');
-                return (
-                    actualMajor >= fromMajor &&
-                    actualMinor >= fromMinor &&
-                    actualPatch >= fromPatch &&
-                    actualMajor <= toMajor &&
-                    actualMinor <= toMinor &&
-                    actualPatch <= toPatch
-                );
-            });
-        });
-        return f;
-    });
-}
 
 const includedMethods = process.env.TESTS_INCLUDED_METHODS;
 const excludedMethods = process.env.TESTS_EXCLUDED_METHODS;

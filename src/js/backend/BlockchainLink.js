@@ -1,7 +1,9 @@
 /* @flow */
 import BlockchainLink from '@trezor/blockchain-link';
+import DataManager from '../data/DataManager';
 import { BlockchainMessage } from '../message/builder';
 import { BLOCKCHAIN, ERRORS } from '../constants';
+import { getOnionDomain } from '../utils/urlUtils';
 import type {
     CoreMessage,
     CoinInfo,
@@ -10,11 +12,19 @@ import type {
     BlockchainGetAccountBalanceHistory,
 } from '../types';
 
-import { BlockbookWorker, RippleWorker } from '../env/node/workers';
+import {
+    BlockbookWorker,
+    RippleWorker,
+    BlockfrostWorker,
+    ElectrumWorker,
+} from '../env/node/workers';
 
 type Options = {
     coinInfo: CoinInfo,
     postMessage: (message: CoreMessage) => void,
+    proxy?: string,
+    onionDomains?: { [domain: string]: string },
+    debug?: boolean,
 };
 
 // duplicate from blockchain-link
@@ -30,6 +40,10 @@ const getWorker = (type: string) => {
             return BlockbookWorker;
         case 'ripple':
             return RippleWorker;
+        case 'blockfrost':
+            return BlockfrostWorker;
+        case 'electrum':
+            return ElectrumWorker;
         default:
             return null;
     }
@@ -39,6 +53,8 @@ export default class Blockchain {
     link: BlockchainLink;
 
     coinInfo: $ElementType<Options, 'coinInfo'>;
+
+    onionDomains: { [onion: string]: string };
 
     postMessage: $ElementType<Options, 'postMessage'>;
 
@@ -50,24 +66,42 @@ export default class Blockchain {
         this.coinInfo = options.coinInfo;
         this.postMessage = options.postMessage;
 
-        const settings = options.coinInfo.blockchainLink;
-        if (!settings) {
+        const { blockchainLink } = options.coinInfo;
+        if (!blockchainLink) {
             throw ERRORS.TypedError('Backend_NotSupported');
         }
 
-        const worker = getWorker(settings.type);
+        const worker = getWorker(blockchainLink.type);
         if (!worker) {
             throw ERRORS.TypedError(
                 'Backend_WorkerMissing',
-                `BlockchainLink worker not found ${settings.type}`,
+                `BlockchainLink worker not found ${blockchainLink.type}`,
             );
         }
+
+        // map clean urls in to object. key = onion domain, value = clean domain
+        const { onionDomains } = options;
+        this.onionDomains = onionDomains
+            ? blockchainLink.url.reduce((a, url) => {
+                  const onion = getOnionDomain(url, onionDomains);
+                  // NOTE: onion is not necessarily an onion domain.
+                  if (onion !== url) {
+                      a[onion] = url;
+                  }
+                  return a;
+              }, {})
+            : {};
+
+        const server = Object.keys(this.onionDomains).length
+            ? Object.keys(this.onionDomains)
+            : blockchainLink.url;
 
         this.link = new BlockchainLink({
             name: this.coinInfo.shortcut,
             worker,
-            server: settings.url,
-            debug: false,
+            server,
+            debug: options.debug,
+            proxy: options.proxy,
         });
     }
 
@@ -94,13 +128,17 @@ export default class Blockchain {
                 return;
             }
 
+            // find clean domain for current connection
+            const cleanUrl = this.onionDomains[info.url];
+
             // eslint-disable-next-line no-use-before-define
-            setPreferredBacked(this.coinInfo, info.url);
+            setPreferredBacked(this.coinInfo, cleanUrl || info.url);
 
             this.postMessage(
                 BlockchainMessage(BLOCKCHAIN.CONNECT, {
                     coin: this.coinInfo,
                     ...info,
+                    cleanUrl,
                 }),
             );
         });
@@ -317,6 +355,12 @@ export const initBlockchain = async (
                 customBackends[coinInfo.shortcut] ||
                 coinInfo,
             postMessage,
+            debug: DataManager.getSettings('debug'),
+            proxy: DataManager.getSettings('proxy'),
+            onionDomains:
+                DataManager.getSettings('useOnionLinks') && !customBackends[coinInfo.shortcut]
+                    ? DataManager.getConfig().onionDomains
+                    : undefined,
         });
         instances.push(backend);
 
@@ -329,6 +373,20 @@ export const initBlockchain = async (
         }
     }
     return backend;
+};
+
+export const reconnectAllBackends = () => {
+    // collect all running backends as parameters tuple
+    const params: [CoinInfo, $ElementType<Options, 'postMessage'>][] = instances.map(i => [
+        i.coinInfo,
+        i.postMessage,
+    ]);
+    // remove all backends
+    while (instances.length > 0) {
+        instances[0].disconnect();
+    }
+    // initialize again using params tuple
+    return Promise.all(params.map(p => initBlockchain(...p)));
 };
 
 export const dispose = () => {

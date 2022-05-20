@@ -1,12 +1,12 @@
 /* @flow */
 
-import type { ComposeOutput, ComposedTxOutput } from '@trezor/utxo-lib';
+import type { ComposeOutput as UtxoLibOutput, ComposedTxOutput } from '@trezor/utxo-lib';
 import { getOutputScriptType, fixPath } from '../../../utils/pathUtils';
 import { isValidAddress } from '../../../utils/addressUtils';
 import { convertMultisigPubKey } from '../../../utils/hdnodeUtils';
 import { validateParams } from '../helpers/paramsValidator';
 import { ERRORS } from '../../../constants';
-import type { BitcoinNetworkInfo } from '../../../types';
+import type { BitcoinNetworkInfo, ComposeOutput } from '../../../types';
 import type { TxOutputType } from '../../../types/trezor/protobuf';
 
 /** *****
@@ -23,7 +23,7 @@ export const validateTrezorOutputs = (
         validateParams(output, [
             { name: 'address_n', type: 'array' },
             { name: 'address', type: 'string' },
-            { name: 'amount', type: 'string' },
+            { name: 'amount', type: 'uint' },
             { name: 'op_return_data', type: 'string' },
             { name: 'multisig', type: 'object' },
         ]);
@@ -64,9 +64,9 @@ export const validateTrezorOutputs = (
 export const validateHDOutput = (
     output: ComposeOutput,
     coinInfo: BitcoinNetworkInfo,
-): ComposeOutput => {
+): UtxoLibOutput => {
     const validateAddress = address => {
-        if (!isValidAddress(address, coinInfo)) {
+        if (!address || !isValidAddress(address, coinInfo)) {
             throw ERRORS.TypedError(
                 'Method_InvalidParameter',
                 `Invalid ${coinInfo.label} output address format`,
@@ -83,7 +83,7 @@ export const validateHDOutput = (
             };
 
         case 'send-max':
-            validateParams(output, [{ name: 'address', type: 'string', obligatory: true }]);
+            validateParams(output, [{ name: 'address', type: 'string', required: true }]);
             validateAddress(output.address);
             return {
                 type: 'send-max',
@@ -91,7 +91,7 @@ export const validateHDOutput = (
             };
 
         case 'noaddress':
-            validateParams(output, [{ name: 'amount', type: 'string', obligatory: true }]);
+            validateParams(output, [{ name: 'amount', type: 'uint', required: true }]);
             return {
                 type: 'noaddress',
                 amount: output.amount,
@@ -104,12 +104,13 @@ export const validateHDOutput = (
 
         default:
             validateParams(output, [
-                { name: 'amount', type: 'string', obligatory: true },
-                { name: 'address', type: 'string', obligatory: true },
+                { name: 'amount', type: 'uint', required: true },
+                { name: 'address', type: 'string', required: true },
             ]);
             validateAddress(output.address);
             return {
                 type: 'complete',
+                // $FlowIssue missing address will fail in validation above
                 address: output.address,
                 amount: output.amount,
             };
