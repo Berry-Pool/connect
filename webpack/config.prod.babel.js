@@ -104,6 +104,7 @@ module.exports = {
         modules: [SRC, 'node_modules'],
         mainFields: ['browser', 'module', 'main'],
         fallback: {
+            url: false,
             fs: false, // ignore "fs" import in fastxpub (hd-wallet)
             https: false, // ignore "https" import in "ripple-lib"
             vm: false, // ignore "vm" imports in "asn1.js@4.10.1" > crypto-browserify"

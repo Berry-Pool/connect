@@ -8,6 +8,6 @@ window.parent.postMessage(
 
 const iframeScript = document.createElement('script');
 iframeScript.setAttribute('type', 'text/javascript');
-iframeScript.setAttribute('src', './js/iframe.2f035b0e0d3a98f22207.js');
+iframeScript.setAttribute('src', './js/iframe.55aa2db9e4b936190252.js');
 iframeScript.setAttribute('async', 'false');
 document.body.appendChild(iframeScript);
