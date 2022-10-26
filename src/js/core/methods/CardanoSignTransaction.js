@@ -9,12 +9,7 @@ import {
 } from './helpers/cardanoAuxiliaryData';
 import { transformCertificate } from './helpers/cardanoCertificate';
 import type { CertificateWithPoolOwnersAndRelays } from './helpers/cardanoCertificate';
-import type {
-    Path,
-    InputWithPath,
-    CollateralInputWithPath,
-    CardanoTxReferenceInput,
-} from './helpers/cardanoInputs';
+import type { Path, InputWithPath, CollateralInputWithPath } from './helpers/cardanoInputs';
 import {
     transformInput,
     transformCollateralInput,
@@ -39,6 +34,7 @@ import type {
     CardanoTxRequiredSigner,
     CardanoTxSigningMode,
     CardanoDerivationType,
+    CardanoTxReferenceInput,
 } from '../../types/trezor/protobuf';
 import type {
     CardanoAuxiliaryDataSupplement,
@@ -76,16 +72,16 @@ export type CardanoSignTransactionParams = {
     scriptDataHash?: string,
     collateralInputsWithPath: CollateralInputWithPath[],
     requiredSigners: CardanoTxRequiredSigner[],
+    //Babbage
+    collateralReturnWithData?: OutputWithData,
+    totalCollateral?: UintType,
+    referenceInputs: CardanoTxReferenceInput[],
     protocolMagic: number,
     networkId: number,
     witnessPaths: Path[],
     additionalWitnessRequests: Path[],
     derivationType: CardanoDerivationType,
     includeNetworkId?: boolean,
-    //Babbage
-    collateralReturnWithData?: OutputWithData,
-    totalCollateral?: UintType,
-    referenceInputs: CardanoTxReferenceInput[],
 };
 
 export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignTransaction'> {
@@ -354,7 +350,6 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
 
     async _sign_tx(): Promise<CardanoSignedTxData> {
         const typedCall = this.device.getCommands().typedCall.bind(this.device.getCommands());
-
         const hasAuxiliaryData = !!this.params.auxiliaryData;
 
         const signTxInitMessage = {
@@ -388,19 +383,8 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             await typedCall('CardanoTxInput', 'CardanoTxItemAck', input);
         }
         // outputs and tokens
-        for (const { output, tokenBundle } of this.params.outputsWithData) {
-            await typedCall('CardanoTxOutput', 'CardanoTxItemAck', output);
-            if (tokenBundle) {
-                for (const assetGroup of tokenBundle) {
-                    await typedCall('CardanoAssetGroup', 'CardanoTxItemAck', {
-                        policy_id: assetGroup.policyId,
-                        tokens_count: assetGroup.tokens.length,
-                    });
-                    for (const token of assetGroup.tokens) {
-                        await typedCall('CardanoToken', 'CardanoTxItemAck', token);
-                    }
-                }
-            }
+        for (const outputWithData of this.params.outputsWithData) {
+            await sendOutput(typedCall, outputWithData);
         }
         // certificates, owners and relays
         for (const { certificate, poolOwners, poolRelays } of this.params

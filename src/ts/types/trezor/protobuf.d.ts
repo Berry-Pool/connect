@@ -827,6 +827,12 @@ export type CardanoTxCollateralInput = {
   prev_index: number;
 };
 
+// CardanoTxReferenceInput
+export type CardanoTxReferenceInput = {
+  prev_hash: string;
+  prev_index: number;
+};
+
 // CardanoTxRequiredSigner
 export type CardanoTxRequiredSigner = {
   key_hash?: string;

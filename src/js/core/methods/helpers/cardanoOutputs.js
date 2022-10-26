@@ -18,6 +18,24 @@ export type OutputWithData = {
 //     tokenBundle?: AssetGroupWithTokens[],
 // };
 
+const hexStringByteLength = (s: string) => s.length / 2;
+
+const sendChunkedHexString = async (
+    typedCall: any,
+    data: string,
+    chunkSize: number,
+    messageType: string,
+) => {
+    let processedSize = 0;
+    while (processedSize < data.length) {
+        const chunk = data.slice(processedSize, processedSize + chunkSize);
+        await typedCall(messageType, 'CardanoTxItemAck', {
+            data: chunk,
+        });
+        processedSize += chunkSize;
+    }
+};
+
 export const transformOutput = (output: any): OutputWithData => {
     validateParams(output, [
         { name: 'address', type: 'string' },
@@ -61,24 +79,6 @@ export const transformOutput = (output: any): OutputWithData => {
     }
 
     return result;
-};
-
-const hexStringByteLength = (s: string) => s.length / 2;
-
-const sendChunkedHexString = async (
-    typedCall: any,
-    data: string,
-    chunkSize: number,
-    messageType: string,
-) => {
-    let processedSize = 0;
-    while (processedSize < data.length) {
-        const chunk = data.slice(processedSize, processedSize + chunkSize);
-        await typedCall(messageType, 'CardanoTxItemAck', {
-            data: chunk,
-        });
-        processedSize += chunkSize;
-    }
 };
 
 export const sendOutput = async (typedCall: any, outputWithData: OutputWithData) => {
