@@ -78,6 +78,8 @@ export const transformOutput = (output: any): OutputWithData => {
         result.output.asset_groups_count = 0;
     }
 
+    console.log('RESULT', result);
+
     return result;
 };
 

@@ -26,6 +26,7 @@ import {
     Enum_CardanoTxWitnessType as CardanoTxWitnessType,
     Enum_CardanoDerivationType,
     Enum_CardanoTxOutputSerializationFormat,
+    Enum_CardanoTxSigningMode,
 } from '../../types/trezor/protobuf';
 import type {
     UintType,
@@ -260,25 +261,16 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
     _ensureFirmwareSupportsParams() {
         const { params } = this;
 
-        params.certificatesWithPoolOwnersAndRelays.forEach(({ certificate }) => {
-            if (certificate.type === CardanoCertificateType.STAKE_POOL_REGISTRATION) {
-                this._ensureFeatureIsSupported('SignStakePoolRegistrationAsOwner');
-            }
+        // we no longer support non-streamed signing
+        this._ensureFeatureIsSupported('TransactionStreaming');
 
+        params.certificatesWithPoolOwnersAndRelays.forEach(({ certificate }) => {
             if (certificate.key_hash) {
                 this._ensureFeatureIsSupported('KeyHashStakeCredential');
             }
         });
 
-        if (params.validityIntervalStart != null) {
-            this._ensureFeatureIsSupported('ValidityIntervalStart');
-        }
-
-        params.outputsWithData.forEach(({ output, tokenBundle }) => {
-            if (tokenBundle && tokenBundle.length > 0) {
-                this._ensureFeatureIsSupported('MultiassetOutputs');
-            }
-
+        params.outputsWithData.forEach(({ output }) => {
             if (output.datum_hash) {
                 this._ensureFeatureIsSupported('OutputDatumHash');
             }
@@ -290,29 +282,13 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             }
         });
 
-        if (params.auxiliaryData) {
-            this._ensureFeatureIsSupported('AuxiliaryData');
-        }
-
-        if (params.ttl === '0') {
-            this._ensureFeatureIsSupported('ZeroTTL');
-        }
-
-        if (params.validityIntervalStart === '0') {
-            this._ensureFeatureIsSupported('ZeroValidityIntervalStart');
-        }
-
-        if (params.auxiliaryData && params.auxiliaryData.hash) {
-            this._ensureFeatureIsSupported('AuxiliaryDataHash');
-        }
-
         if (params.mint.length > 0) {
             this._ensureFeatureIsSupported('TokenMinting');
         }
 
         if (
             params.additionalWitnessRequests.length > 0 ||
-            params.signingMode === CardanoTxSigningModeEnum.MULTISIG_TRANSACTION
+            params.signingMode === Enum_CardanoTxSigningMode.MULTISIG_TRANSACTION
         ) {
             this._ensureFeatureIsSupported('Multisig');
         }
@@ -325,7 +301,7 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             this._ensureFeatureIsSupported('ScriptDataHash');
         }
 
-        if (params.signingMode === CardanoTxSigningModeEnum.PLUTUS_TRANSACTION) {
+        if (params.signingMode === Enum_CardanoTxSigningMode.PLUTUS_TRANSACTION) {
             this._ensureFeatureIsSupported('Plutus');
         }
 
