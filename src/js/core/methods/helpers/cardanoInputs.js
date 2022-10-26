@@ -1,7 +1,11 @@
 /* @flow */
 import { validateParams } from './paramsValidator';
 import { validatePath } from '../../../utils/pathUtils';
-import type { CardanoTxInput, CardanoTxCollateralInput } from '../../../types/trezor/protobuf';
+import type {
+    CardanoTxInput,
+    CardanoTxCollateralInput,
+    CardanoTxReferenceInput,
+} from '../../../types/trezor/protobuf';
 
 export type Path = number[];
 
@@ -40,5 +44,16 @@ export const transformCollateralInput = (collateralInput: any): CollateralInputW
             prev_index: collateralInput.prev_index,
         },
         path: collateralInput.path ? validatePath(collateralInput.path, 5) : undefined,
+    };
+};
+
+export const transformReferenceInput = (referenceInput: any): CardanoTxReferenceInput => {
+    validateParams(referenceInput, [
+        { name: 'prev_hash', type: 'string', required: true },
+        { name: 'prev_index', type: 'number', required: true },
+    ]);
+    return {
+        prev_hash: referenceInput.prev_hash,
+        prev_index: referenceInput.prev_index,
     };
 };

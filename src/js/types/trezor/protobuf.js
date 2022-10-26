@@ -966,6 +966,14 @@ export type CardanoSignedTx = {
     serialized_tx?: string,
 };
 
+export const Enum_CardanoTxOutputSerializationFormat = Object.freeze({
+    ARRAY_LEGACY: 0,
+    MAP_BABBAGE: 1,
+});
+export type CardanoTxOutputSerializationFormat = $Values<
+    typeof Enum_CardanoTxOutputSerializationFormat,
+>;
+
 // Success
 export type Success = {
     message: string,

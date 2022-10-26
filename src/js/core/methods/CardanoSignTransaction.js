@@ -9,10 +9,19 @@ import {
 } from './helpers/cardanoAuxiliaryData';
 import { transformCertificate } from './helpers/cardanoCertificate';
 import type { CertificateWithPoolOwnersAndRelays } from './helpers/cardanoCertificate';
-import type { Path, InputWithPath, CollateralInputWithPath } from './helpers/cardanoInputs';
-import { transformInput, transformCollateralInput } from './helpers/cardanoInputs';
-import { transformOutput } from './helpers/cardanoOutputs';
-import type { OutputWithTokens } from './helpers/cardanoOutputs';
+import type {
+    Path,
+    InputWithPath,
+    CollateralInputWithPath,
+    CardanoTxReferenceInput,
+} from './helpers/cardanoInputs';
+import {
+    transformInput,
+    transformCollateralInput,
+    transformReferenceInput,
+} from './helpers/cardanoInputs';
+import { sendOutput, transformOutput } from './helpers/cardanoOutputs';
+import type { OutputWithData } from './helpers/cardanoOutputs';
 import { legacySerializedTxToResult, toLegacyParams } from './helpers/cardanoSignTxLegacy';
 import { ERRORS } from '../../constants';
 import {
@@ -21,6 +30,7 @@ import {
     Enum_CardanoTxSigningMode as CardanoTxSigningModeEnum,
     Enum_CardanoTxWitnessType as CardanoTxWitnessType,
     Enum_CardanoDerivationType,
+    Enum_CardanoTxOutputSerializationFormat,
 } from '../../types/trezor/protobuf';
 import type {
     UintType,
@@ -41,14 +51,7 @@ import { tokenBundleToProto } from './helpers/cardanoTokenBundle';
 
 // todo: remove when listed firmwares become mandatory for cardanoSignTransaction
 const CardanoSignTransactionFeatures = Object.freeze({
-    SignStakePoolRegistrationAsOwner: ['0', '2.3.5'],
-    ValidityIntervalStart: ['0', '2.3.5'],
-    MultiassetOutputs: ['0', '2.3.5'],
-    AuxiliaryData: ['0', '2.3.7'],
-    ZeroTTL: ['0', '2.4.2'],
-    ZeroValidityIntervalStart: ['0', '2.4.2'],
     TransactionStreaming: ['0', '2.4.2'],
-    AuxiliaryDataHash: ['0', '2.4.2'],
     TokenMinting: ['0', '2.4.3'],
     Multisig: ['0', '2.4.3'],
     NetworkIdInTxBody: ['0', '2.4.4'],
@@ -56,12 +59,13 @@ const CardanoSignTransactionFeatures = Object.freeze({
     ScriptDataHash: ['0', '2.4.4'],
     Plutus: ['0', '2.4.4'],
     KeyHashStakeCredential: ['0', '2.4.4'],
+    Babbage: ['0', '2.5.2'],
 });
 
 export type CardanoSignTransactionParams = {
     signingMode: CardanoTxSigningMode,
     inputsWithPath: InputWithPath[],
-    outputsWithTokens: OutputWithTokens[],
+    outputsWithData: OutputWithData[],
     fee: UintType,
     ttl?: UintType,
     certificatesWithPoolOwnersAndRelays: CertificateWithPoolOwnersAndRelays[],
@@ -78,6 +82,10 @@ export type CardanoSignTransactionParams = {
     additionalWitnessRequests: Path[],
     derivationType: CardanoDerivationType,
     includeNetworkId?: boolean,
+    //Babbage
+    collateralReturnWithData?: OutputWithData,
+    totalCollateral?: UintType,
+    referenceInputs: CardanoTxReferenceInput[],
 };
 
 export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignTransaction'> {
@@ -124,6 +132,8 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             { name: 'scriptDataHash', type: 'string' },
             { name: 'collateralInputs', type: 'array', allowEmpty: true },
             { name: 'requiredSigners', type: 'array', allowEmpty: true },
+            { name: 'totalCollateral', type: 'uint' },
+            { name: 'referenceInputs', type: 'array', allowEmpty: true },
             { name: 'protocolMagic', type: 'number', required: true },
             { name: 'networkId', type: 'number', required: true },
             { name: 'additionalWitnessRequests', type: 'array', allowEmpty: true },
@@ -133,7 +143,7 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
 
         const inputsWithPath: InputWithPath[] = payload.inputs.map(transformInput);
 
-        const outputsWithTokens: OutputWithTokens[] = payload.outputs.map(transformOutput);
+        const outputsWithData: OutputWithData[] = payload.outputs.map(transformOutput);
 
         let certificatesWithPoolOwnersAndRelays: CertificateWithPoolOwnersAndRelays[] = [];
         if (payload.certificates) {
@@ -192,10 +202,19 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             });
         }
 
+        const collateralReturnWithData = payload.collateralReturn
+            ? transformOutput(payload.collateralReturn)
+            : undefined;
+
+        let referenceInputs: CardanoTxReferenceInput[] = [];
+        if (payload.referenceInputs) {
+            referenceInputs = payload.referenceInputs.map(transformReferenceInput);
+        }
+
         this.params = {
             signingMode: payload.signingMode,
             inputsWithPath,
-            outputsWithTokens,
+            outputsWithData,
             fee: payload.fee,
             ttl: payload.ttl,
             certificatesWithPoolOwnersAndRelays,
@@ -206,6 +225,9 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             scriptDataHash: payload.scriptDataHash,
             collateralInputsWithPath,
             requiredSigners,
+            collateralReturnWithData,
+            totalCollateral: payload.totalCollateral,
+            referenceInputs,
             protocolMagic: payload.protocolMagic,
             networkId: payload.networkId,
             witnessPaths: gatherWitnessPaths(
@@ -256,7 +278,7 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             this._ensureFeatureIsSupported('ValidityIntervalStart');
         }
 
-        params.outputsWithTokens.forEach(({ output, tokenBundle }) => {
+        params.outputsWithData.forEach(({ output, tokenBundle }) => {
             if (tokenBundle && tokenBundle.length > 0) {
                 this._ensureFeatureIsSupported('MultiassetOutputs');
             }
@@ -310,6 +332,24 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
         if (params.signingMode === CardanoTxSigningModeEnum.PLUTUS_TRANSACTION) {
             this._ensureFeatureIsSupported('Plutus');
         }
+
+        params.outputsWithData.forEach(({ output, inlineDatum, referenceScript }) => {
+            if (
+                output.format === Enum_CardanoTxOutputSerializationFormat.MAP_BABBAGE ||
+                inlineDatum ||
+                referenceScript
+            ) {
+                this._ensureFeatureIsSupported('Babbage');
+            }
+        });
+
+        if (
+            params.collateralReturnWithData ||
+            params.totalCollateral != null ||
+            params.referenceInputs.length > 0
+        ) {
+            this._ensureFeatureIsSupported('Babbage');
+        }
     }
 
     async _sign_tx(): Promise<CardanoSignedTxData> {
@@ -322,7 +362,7 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             protocol_magic: this.params.protocolMagic,
             network_id: this.params.networkId,
             inputs_count: this.params.inputsWithPath.length,
-            outputs_count: this.params.outputsWithTokens.length,
+            outputs_count: this.params.outputsWithData.length,
             fee: this.params.fee,
             ttl: this.params.ttl,
             certificates_count: this.params.certificatesWithPoolOwnersAndRelays.length,
@@ -334,6 +374,9 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             script_data_hash: this.params.scriptDataHash,
             collateral_inputs_count: this.params.collateralInputsWithPath.length,
             required_signers_count: this.params.requiredSigners.length,
+            has_collateral_return: this.params.collateralReturnWithData != null,
+            total_collateral: this.params.totalCollateral,
+            reference_inputs_count: this.params.referenceInputs.length,
             derivation_type: this.params.derivationType,
             include_network_id: this.params.includeNetworkId,
         };
@@ -345,7 +388,7 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
             await typedCall('CardanoTxInput', 'CardanoTxItemAck', input);
         }
         // outputs and tokens
-        for (const { output, tokenBundle } of this.params.outputsWithTokens) {
+        for (const { output, tokenBundle } of this.params.outputsWithData) {
             await typedCall('CardanoTxOutput', 'CardanoTxItemAck', output);
             if (tokenBundle) {
                 for (const assetGroup of tokenBundle) {
@@ -422,6 +465,14 @@ export default class CardanoSignTransaction extends AbstractMethod<'cardanoSignT
         // required signers
         for (const requiredSigner of this.params.requiredSigners) {
             await typedCall('CardanoTxRequiredSigner', 'CardanoTxItemAck', requiredSigner);
+        }
+        // collateral return
+        if (this.params.collateralReturnWithData) {
+            await sendOutput(typedCall, this.params.collateralReturnWithData);
+        }
+        // reference inputs
+        for (const referenceInput of this.params.referenceInputs) {
+            await typedCall('CardanoTxReferenceInput', 'CardanoTxItemAck', referenceInput);
         }
         // witnesses
         const witnesses: CardanoSignedTxWitness[] = [];
